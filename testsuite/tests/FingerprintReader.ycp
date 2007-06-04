@@ -1,0 +1,13 @@
+{
+
+// testedfiles: FingerprintReader.ycp
+
+include "testsuite.ycp";
+TESTSUITE_INIT([], nil);
+
+import "FingerprintReader";
+
+DUMP("FingerprintReader::Modified");
+TEST(``(FingerprintReader::Modified()), [], nil);
+
+}

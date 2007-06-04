@@ -1,0 +1,30 @@
+@HEADER-COMMENT@
+
+@HEADER@
+BuildRequires:	libthinkfinger
+Requires:	yast2
+BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-devtools yast2-testsuite
+
+BuildArchitectures:	noarch
+
+Summary:	Configuration of fingerprint reader
+
+%description
+-
+
+@PREP@
+
+@BUILD@
+
+@INSTALL@
+
+@CLEAN@
+
+%files
+%defattr(-,root,root)
+%dir @yncludedir@/fingerprint-reader
+@yncludedir@/fingerprint-reader/*
+@clientdir@/fingerprint-reader.ycp
+@moduledir@/FingerprintReader.*
+@desktopdir@/fingerprint-reader.desktop
+%doc @docdir@

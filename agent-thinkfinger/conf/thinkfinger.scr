@@ -1,0 +1,16 @@
+/**
+ * File:	thinkfinger.scr
+ * Summary:	ThinkFinger agent
+ * Author:	Jiri Suchomel <jsuchome@suse.cz>
+ * Access:	read / write / execute
+ *
+ * Example: FIXME
+ *
+ * $Id$
+ *
+ */
+.thinkfinger
+
+`ag_thinkfinger(
+  `ThinkFingerAgent()
+)

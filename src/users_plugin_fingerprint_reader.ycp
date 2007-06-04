@@ -1,0 +1,151 @@
+/**
+ * File:
+ *	include/users/users_plugin_fingerprint_reader.ycp
+ *
+ * Package:
+ *	Configuration of Fingerprint Reader
+ *
+ * Summary:
+ *	GUI part of plugin (UsersPluginFingerprintReader) used to manage
+ *	user fingerprints on the appropriate hardware
+ *
+ * Authors:
+ *	Jiri Suchomel <jsuchome@suse.cz>
+ *
+ * $Id$
+ */
+
+{
+    textdomain "fingerprint-reader"; // use own textdomain for new plugins
+
+    import "Label";
+    import "UsersPluginFingerprintReader";
+    import "Wizard";
+
+    any ret			= nil;
+    string func			= "";
+    map<string,any> config	= $[];
+    map<string,any> data	= $[];
+
+    /* Check arguments */
+    if(size(WFM::Args()) > 0 && is(WFM::Args(0), string)) {
+	func = (string) WFM::Args(0);
+	if(size(WFM::Args()) > 1 && is(WFM::Args(1), map))
+	    config = (map<string,any>)WFM::Args(1);
+	if(size(WFM::Args()) > 2 && is(WFM::Args(2), map))
+	    data = (map<string,any>)WFM::Args(2);
+    }
+    y2milestone("----------------------------------------");
+    y2milestone("users plugin started: FingerprintReader");
+
+    y2debug ("func=%1, config=%2, data=%3", func,config,data);
+
+    if (func == "Summary") {
+	ret = UsersPluginFingerprintReader::Summary (config, $[]);
+    }
+    else if (func == "Name") {
+	ret = UsersPluginFingerprintReader::Name (config, $[]);
+    }
+    else if (func == "Dialog") {
+
+	string caption	= UsersPluginFingerprintReader::Name (config, $[]);
+	string help_text = _("<p></p>");
+
+	term contents = `HBox (`HSpacing (1.5), `VBox(
+	    `VSpacing(0.5),
+	    `ReplacePoint (`id (`rp),
+		`Label (`id (`label), "Initializing...")
+	    ),
+	    `VSpacing (0.5)
+	    ),
+	    `HSpacing (1.5)
+	);
+
+	Wizard::CreateDialog ();
+        Wizard::SetDesktopIcon("users");
+
+	// dialog caption
+	Wizard::SetContentsButtons(caption, contents, help_text,
+	    Label::CancelButton(), Label::AcceptButton());
+
+	Wizard::HideAbortButton ();
+	Wizard::DisableNextButton ();
+
+
+
+	string swipe_string (map statemap) {
+
+	    return sformat ("Please swipe your finger (successful swipes %1/3, failed swipes: %2)...",
+		statemap["swipe_success"]:0, statemap["swipe_failed"]:0);
+	}
+
+	SCR::Execute (.thinkfinger.add-user, data["uid"]:"");
+
+    /*
+    UI::OpenDialog (`VBox (`HSpacing (20),
+	`ReplacePoint (`id (`rp),
+	    `Label (`id (`label), "Initializing...")
+	),
+	`PushButton (`id(`ok), "Cancel")
+    ));
+    */
+	boolean exit	= false;
+	while (true)
+	{
+
+	map statemap	= (map) SCR::Read (.thinkfinger.state);
+	if (statemap != nil && statemap != $[])
+	{
+y2warning ("statemap: %1", statemap);
+	    string state	= statemap["state"]:"";
+	    switch (state) {
+		case "TF_STATE_ACQUIRE_SUCCESS": {
+		    UI::ReplaceWidget (`id (`rp), `Label ("Success"));
+		    exit = true;
+		    break;
+		}
+		case "TF_STATE_ACQUIRE_FAILED" : {
+		    UI::ReplaceWidget (`id (`rp), `Label ("Failure"));
+		    exit = true;
+		    break;
+		}
+		case "TF_STATE_SWIPE_FAILED" : {
+		    UI::ReplaceWidget (`id (`rp), `Label (swipe_string (statemap)));
+		    break;
+		}
+		case "TF_STATE_SWIPE_SUCCESS" : {
+		    UI::ReplaceWidget (`id (`rp), `Label (swipe_string (statemap)));
+		    break;
+		}
+		case "TF_STATE_SWIPE_0" : {
+		    UI::ReplaceWidget (`id (`rp), `Label (swipe_string (statemap)));
+		    break;
+		}
+	    }
+
+	}
+	else if (statemap == nil)
+	{
+	    break;
+	}
+
+	any r = UI::PollInput ();
+	if (r == `cancel || exit) break;
+	sleep (5);
+	}
+	if (SCR::Read (.thinkfinger.exit_status) == true)
+	{
+	    // new id was already saved
+	    Wizard::DisableBackButton ();
+	    Wizard::EnableNextButton ();
+	}
+
+	UI::UserInput ();
+	Wizard::CloseDialog ();
+    }
+    y2debug ("ret=%1", ret);
+    y2milestone("users plugin finished");
+    y2milestone("----------------------------------------");
+
+    return ret;
+}
