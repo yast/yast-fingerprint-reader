@@ -56,6 +56,7 @@
 	    `ReplacePoint (`id (`rp),
 		`Label (`id (`label), "Initializing...")
 	    ),
+	    `PushButton (`id (`cancel), Label::CancelButton ()),
 	    `VSpacing (0.5)
 	    ),
 	    `HSpacing (1.5)
@@ -66,12 +67,11 @@
 
 	// dialog caption
 	Wizard::SetContentsButtons(caption, contents, help_text,
-	    Label::CancelButton(), Label::AcceptButton());
+	    Label::BackButton(), Label::AcceptButton());
 
 	Wizard::HideAbortButton ();
 	Wizard::DisableNextButton ();
-
-
+	Wizard::DisableBackButton ();
 
 	string swipe_string (map statemap) {
 
@@ -79,7 +79,15 @@
 		statemap["swipe_success"]:0, statemap["swipe_failed"]:0);
 	}
 
-	SCR::Execute (.thinkfinger.add-user, data["uid"]:"");
+	boolean exit	= false;
+	any ui		= nil;
+
+	if (SCR::Execute (.thinkfinger.add-user, data["uid"]:"") != true)
+	{
+	    ui = `cancel;
+	    // status message
+	    UI::ReplaceWidget (`id (`rp), `Label ("Initialization of fingerprint reader failed."));
+	}
 
     /*
     UI::OpenDialog (`VBox (`HSpacing (20),
@@ -89,16 +97,14 @@
 	`PushButton (`id(`ok), "Cancel")
     ));
     */
-	boolean exit	= false;
-	while (true)
+	while (ui != `cancel)
 	{
-
-	map statemap	= (map) SCR::Read (.thinkfinger.state);
-	if (statemap != nil && statemap != $[])
-	{
+	    map statemap	= (map) SCR::Read (.thinkfinger.state);
+	    if (statemap != nil && statemap != $[])
+	    {
 y2warning ("statemap: %1", statemap);
-	    string state	= statemap["state"]:"";
-	    switch (state) {
+		string state	= statemap["state"]:"";
+		switch (state) {
 		case "TF_STATE_ACQUIRE_SUCCESS": {
 		    UI::ReplaceWidget (`id (`rp), `Label ("Success"));
 		    exit = true;
@@ -121,23 +127,35 @@ y2warning ("statemap: %1", statemap);
 		    UI::ReplaceWidget (`id (`rp), `Label (swipe_string (statemap)));
 		    break;
 		}
+		}
+	    }
+	    else if (statemap == nil)
+	    {
+		break;
+	    }
+	    if (exit) break;//must be before check for cancel
+
+	    ui	= UI::PollInput ();
+
+	    if (ui == `cancel || ui == `back)
+	    {
+y2internal ("ui: %1", ui);
+		break;
+		//FIXME solve canceling...
 	    }
 
+	    sleep (5);
 	}
-	else if (statemap == nil)
-	{
-	    break;
-	}
-
-	any r = UI::PollInput ();
-	if (r == `cancel || exit) break;
-	sleep (5);
-	}
-	if (SCR::Read (.thinkfinger.exit_status) == true)
+	if (ui != `cancel && SCR::Read (.thinkfinger.exit_status) == true)
 	{
 	    // new id was already saved
 	    Wizard::DisableBackButton ();
 	    Wizard::EnableNextButton ();
+	    UI::ChangeWidget (`id (`cancel), `Enabled, false);
+	}
+	else
+	{
+	    Wizard::EnableBackButton ();
 	}
 
 	UI::UserInput ();

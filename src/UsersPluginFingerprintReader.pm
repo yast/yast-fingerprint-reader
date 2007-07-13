@@ -27,51 +27,35 @@ YaST::YCP::Import ("SCR");
 # error message, returned when some plugin function fails
 my $error	= "";
 
-##--------------------------------------
-
-# All functions have 2 "any" parameters: this will probably mean
-# 1st: configuration map (hash) - e.g. saying if we work with user
-# 2nd: data map (hash) of user to work with
-
-# in 'config' map there is a info of this type:
-# "what"		=> "user" / "group"
-# "modified"		=> "added"/"edited"/"deleted"
-# "enabled"		=> 1/ key not present
-# "disabled"		=> 1/ key not present
-# "plugins_to_remove"	=> list of plugins which has to be removed 
-
-# 'data' map contains the atrtributes of the user. It could also contain
-# some keys, which Users module uses internaly (like 'groupname' for name of
-# user's default group). Just ignore these values
-
-# -- Warning messages --
-# There is a special way, when you want to give user additional information
-# (warning) about some issues appeared during the function.
-#
-# These keys can be saved by plugin to the result structure of AddBefore,
-# Add, EditBefore, Edit, Enable, Disable calls:
-#    "warning_message"		=> STRING
-#        Translated message that should be shown to user (probably as a popup)
-#    "warning_message_ID"	=> STRING
-#	The ID of the message (optional).
-#
-# This key can be present in user $data hash:
-#    "confirmed_warnings"	=> HASH (in the form { message_ID_1 => 1 })
-#	(This has sense only if plugin uses optional "warning_message_ID" key)
-#	Indicates which messages were already shown to this user.
-#	Plugin function may check for existence of the message_ID_1 in this
-#	hash before generating "warning_message", to realize if this message
-#	was alredy shown before (in the same situation).
-# See example in AddBefore function.
-    
-##------------------------------------
+my $fingerprint_reader_available = undef;
+   
+##----------------------------------------
+##--------------------- internal functions
 
 # helper, check if Fingerprint Reader was already configured
+#FIXME do a pam-config query
 sub fingerprint_reader_configured {
 
-    #FIXME do a pam-config query
     return YaST::YCP::Boolean (1);
 }
+
+# helper, check if Fingerprint Reader is available
+#FIXME check for pam package installed? better do some hw check...
+sub is_fingerprint_reader_available {
+
+    if (not defined $fingerprint_reader_available) {
+	$fingerprint_reader_available = Package->Installed ("pam_thinkfinger");
+    }
+    return $fingerprint_reader_available;
+}
+
+##------------------------------------------
+##--------------------- global API functions
+
+# All functions have 2 "any" parameters: these mean:
+# 1st: configuration map (hash) - e.g. saying if we work with user or group
+# 2nd: data map (hash) of user/group to work with
+# for details, see UsersPluginLDAPAll.pm
 
 # return names of provided functions
 BEGIN { $TYPEINFO{Interface} = ["function", ["list", "string"], "any", "any"];}
@@ -119,7 +103,7 @@ sub Summary {
 
     my $self	= shift;
     # plugin summary (table item)
-    my $ret 	= __("Set the fingerprint of an User");
+    my $ret 	= __("Set the user's fingerprint");
     return $ret;
 }
 
@@ -149,7 +133,6 @@ sub PluginRemovable {
 BEGIN { $TYPEINFO{GUIClient} = ["function", "string", "any", "any"];}
 sub GUIClient {
 
-    my $self	= shift;
     return "users_plugin_fingerprint_reader";
 }
 
@@ -164,10 +147,11 @@ BEGIN { $TYPEINFO{Restriction} = ["function",
 sub Restriction {
 
     my $self	= shift;
+    # do the check here, so the plugin is not shown when there is no hw for it
+    return {} if not is_fingerprint_reader_available ();
     return {
 	    "local"	=> 1,
 	    "system"	=> 1,
-#	    "ldap"	=> 1, #only for local ldap users?
 	    # only for users
 	    "user"	=> 1,
     };
