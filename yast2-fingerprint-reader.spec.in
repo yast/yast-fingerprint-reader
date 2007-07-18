@@ -7,6 +7,8 @@ BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-devtools yast2-t
 
 BuildArchitectures:	noarch
 
+Conflicts:	yast2-hardware-detection < 2.15.7
+
 Summary:	Configuration of fingerprint reader
 
 %description
