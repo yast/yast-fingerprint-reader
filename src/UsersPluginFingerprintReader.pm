@@ -39,12 +39,12 @@ sub fingerprint_reader_configured {
     return YaST::YCP::Boolean (1);
 }
 
-# helper, check if Fingerprint Reader is available
-#FIXME check for pam package installed? better do some hw check...
+# helper function: check if Fingerprint Reader (the device) is available
 sub is_fingerprint_reader_available {
 
     if (not defined $fingerprint_reader_available) {
-	$fingerprint_reader_available = Package->Installed ("pam_thinkfinger");
+	my @devices	= @{SCR->Read (".probe.fingerprint")};
+	$fingerprint_reader_available = (@devices > 0);
     }
     return $fingerprint_reader_available;
 }
@@ -64,7 +64,6 @@ sub Interface {
     my $self		= shift;
     my @interface 	= (
 	    "GUIClient",
-	    "Check",
 	    "Name",
 	    "Summary",
 	    "Restriction",
@@ -192,6 +191,7 @@ sub EditBefore {
     return $data;
 }
 
+#FIXME in Write, solve user renaming
 
 
 42

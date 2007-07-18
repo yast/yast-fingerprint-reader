@@ -15,23 +15,15 @@
 
 using namespace std;
 
-#include <iostream>
 #include <libthinkfinger.h>
-
-#include <string>
-#include <vector>
-
-#include <unistd.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <libintl.h>
-#include <fstream>
-#include <pthread.h>
+
+#include <string>
 
 // for testing only...
-//#define DEFAULT_BIR_PATH "/tmp/test.bir"
 #define MAX_PATH       256
-// #define MODE_ACQUIRE   1
 #define BIR_EXTENSION    ".bir"
 #define PAM_BIRDIR "/etc/pam_thinkfinger"
 
@@ -42,32 +34,10 @@ class ThinkFingerAgent : public SCRAgent
 {
 private:
 
-    libthinkfinger *tf;
-
-    pthread_t pt;
-
-    string user;
     /**
-     * Forbid any calls, when not initialized
+     * pid of the child process after fork
      */
-    bool initialized;
-
-    /*
-    libthinkfinger_state global_state; // save the last state
-
-    s_tfdata swipes; // save the nubmer of (un)succ. swipes globally
-    */
-
-    /**
-     * Call ThinkFinger->Recover in the new thread
-     */
-//    static void *call_recover (ThinkFingerAgent *);
-
-    static void *call_acquire (ThinkFingerAgent *);
-
-//    static void *call_acquire (libthinkfinger *my_tf);
-
-//    void callback (libthinkfinger_state, void *);
+    pid_t child_pid;
 
 public:
     /**
@@ -113,11 +83,11 @@ public:
      */
     virtual YCPValue otherCommand(const YCPTerm& term);
 
-    libthinkfinger_state global_state; // save the last state
 
-    int swipe_success;
-    int swipe_failed; // FIXME use functions!
-//    s_tfdata swipes; // save the nubmer of (un)succ. swipes globally
+    /**
+     * array with pipe file descriptors
+     */
+    int data_pipe[2];
 };
 
 #endif /* _ThinkFingerAgent_h */
