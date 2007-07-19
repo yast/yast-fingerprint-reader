@@ -12,7 +12,7 @@ use YaST::YCP qw(:LOGGING);
 use YaPI;
 use Data::Dumper;
 
-textdomain("users");
+textdomain("fingerprint-reader");
 
 our %TYPEINFO;
 
