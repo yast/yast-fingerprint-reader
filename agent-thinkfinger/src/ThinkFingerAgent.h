@@ -88,6 +88,9 @@ public:
      * array with pipe file descriptors
      */
     int data_pipe[2];
+
+    libthinkfinger *tf;
+
 };
 
 #endif /* _ThinkFingerAgent_h */

@@ -11,11 +11,16 @@
 
 #define PC(n)       (path->component_str(n))
 
-//FIXME remove unused parts...
+#define INIT_FAILED		500
+#define SET_FILE_FAILED		600
+#define SET_CALLBACK_FAILED	700
+
+// structure to be passed to callback
 typedef struct {
-    char bir[MAX_PATH];
     int write_fd;
 } s_tfdata;
+
+static bool child_exited	= false;
 
 /**
  * callback function to be called from libthinkfinger_acquire
@@ -29,12 +34,19 @@ static void callback (libthinkfinger_state state, void *data)
 	y2error("write to pipe failed: %d (%m)", errno);
 }
 
+// handler for SIGCHLD signal (child exited)
+static void catch_child_exit (int sig_num)
+{
+    child_exited	= true;
+}
+
 /**
  * Constructor
  */
 ThinkFingerAgent::ThinkFingerAgent() : SCRAgent()
 {
     child_pid		= -1;
+    child_exited	= false;
 }
 
 /**
@@ -86,9 +98,19 @@ YCPValue ThinkFingerAgent::Read(const YCPPath &path, const YCPValue& arg, const 
 		if (errno != EINTR && errno != EAGAIN)
 		    y2error ("error reading from pipe: %d (%m)", errno);
 	    }
-	    else {
+	    else if (retval == size) {
+		if (state == SET_FILE_FAILED || state == SET_CALLBACK_FAILED)
+		{
+		    y2warning ("some initialization failed (%d)...", state);
+		    return ret;
+		}
 		retmap->add (YCPString ("state"), YCPInteger (state));
 y2internal ("retval from read %d, state is %d", retval, state);
+	    }
+	    if (child_exited)
+	    {
+		y2warning ("looks like child exited...");
+		return ret;
 	    }
 	    return retmap;
 	}
@@ -115,22 +137,16 @@ y2internal ("waiting for child exit...");
 
 
 /**
- * Write TODO finalize?
+ * Write - nothing to do
  */
 YCPBoolean ThinkFingerAgent::Write(const YCPPath &path, const YCPValue& value,
-			     const YCPValue& arg)
+	                             const YCPValue& arg)
 {
-    y2debug("Path in Write(): %s", path->toString().c_str());
-    YCPBoolean ret = YCPBoolean(false);
-
-    if (path->length() == 0) {
-        ret = YCPBoolean(true);
-    }
-    return ret;
+    return YCPBoolean(false);
 }
- 
+
 /**
- * Execute(.thinkfinger) must be run first to initialize TODO?
+ * Execute(.thinkfinger.add-user) is action to acquire fingerprint
  */
 YCPValue ThinkFingerAgent::Execute(const YCPPath &path, const YCPValue& val, const YCPValue& arg)
 {
@@ -143,8 +159,8 @@ YCPValue ThinkFingerAgent::Execute(const YCPPath &path, const YCPValue& val, con
 y2internal ("killing child process with pid %d", child_pid);
 	    if (child_pid)
 		kill (child_pid, 15);
-	    // TODO wait and kill -9?
 	    child_pid	= -1;
+	    if (tf) libthinkfinger_free (tf);
 	    ret = YCPBoolean (true);
 	}
 	else if (PC(0) == "add-user") {
@@ -162,6 +178,13 @@ y2internal ("killing child process with pid %d", child_pid);
 		y2error ("pipe creation failed");
 		return ret;
 	    }
+
+	    libthinkfinger_init_status init_status;
+	    tf = libthinkfinger_new (&init_status);
+	    if (init_status != TF_INIT_SUCCESS) {
+		y2error ("libthinkfinger_new failed");
+		return ret;
+	    }
 	    long arg;
 	    arg = fcntl (data_pipe[0], F_GETFL);
 	    if (fcntl (data_pipe[0], F_SETFL, arg | O_NONBLOCK ) < 0)
@@ -171,6 +194,7 @@ y2internal ("killing child process with pid %d", child_pid);
 		close (data_pipe[1]);
 		return ret;
 	    }
+	    signal (SIGCHLD, catch_child_exit);
 	    child_pid	= fork ();
 	    if (child_pid == -1)
 	    {
@@ -188,31 +212,30 @@ y2internal ("killing child process with pid %d", child_pid);
 		s_tfdata tfdata;
 		tfdata.write_fd		= data_pipe[1];
 
-		libthinkfinger_init_status init_status;
-		libthinkfinger *tf;
-		tf = libthinkfinger_new (&init_status);
-		if (init_status != TF_INIT_SUCCESS) {
-		    y2error ("libthinkfinger_new failed");
-		    exit (retval);//FIXME handle sigchld
-		}
-
-		snprintf (tfdata.bir, MAX_PATH-1, "%s/%s%s", PAM_BIRDIR, user.c_str(), BIR_EXTENSION);
-y2internal ("data file is '%s'", tfdata.bir);//FIXME
+		string path (PAM_BIRDIR);
+		path += "/" + user + BIR_EXTENSION;
+y2internal ("path is '%s'", path.c_str());
 // 1. create bir.file in tmpdir
 // 2. move it (and possible rename) in Write
 // 3. remove the old bir file if present in PAM_BIRDIR with org_uid
 // (4. but do not remove the new one of added user of the same name!)
 
-		if (libthinkfinger_set_file (tf, tfdata.bir) < 0)
+		if (libthinkfinger_set_file (tf, path.c_str ()) < 0)
 		{
 		    y2error ("libthinkfinger_set_file failed");
-		    libthinkfinger_free (tf);
+		    if (tf) libthinkfinger_free (tf);
+		    retval		= SET_FILE_FAILED;
+		    write (data_pipe[1], &retval, sizeof(libthinkfinger_state));
+		    close (data_pipe[1]);
 		    exit (retval);		
 		}
 		if (libthinkfinger_set_callback (tf, callback, &tfdata) < 0)
 		{
 		    y2error ("libthinkfinger_set_callback failed");
-		    libthinkfinger_free (tf);
+		    if (tf) libthinkfinger_free (tf);
+		    retval		= SET_CALLBACK_FAILED;
+		    write (data_pipe[1], &retval, sizeof(libthinkfinger_state));
+		    close (data_pipe[1]);
 		    exit (retval);		
 		}
 		int tf_state = libthinkfinger_acquire (tf);
