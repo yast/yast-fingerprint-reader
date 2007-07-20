@@ -153,6 +153,7 @@
 	    else if (statemap == nil)
 	    {
 y2internal ("statemap is nil - error?");
+		exit_status = (integer) SCR::Read (.thinkfinger.exit_status);
 		break;
 	    }
 	    if (exit)
