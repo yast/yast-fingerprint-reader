@@ -105,7 +105,6 @@ YCPValue ThinkFingerAgent::Read(const YCPPath &path, const YCPValue& arg, const 
 		    return ret;
 		}
 		retmap->add (YCPString ("state"), YCPInteger (state));
-y2internal ("retval from read %d, state is %d", retval, state);
 	    }
 	    if (child_exited)
 	    {
@@ -163,11 +162,15 @@ y2internal ("killing child process with pid %d", child_pid);
 	    if (tf) libthinkfinger_free (tf);
 	    ret = YCPBoolean (true);
 	}
+	/**
+	 * parameter is whole path to target bir file, e.g.
+	 * /tmp/YaST-123-456/hh.bir
+	 */
 	else if (PC(0) == "add-user") {
-	    string user;
+	    string bir_path;
 	    if (!val.isNull())
 	    {
-		user = val->asString()->value();
+		bir_path = val->asString()->value();
 	    }
 	    else
 	    {
@@ -212,15 +215,9 @@ y2internal ("killing child process with pid %d", child_pid);
 		s_tfdata tfdata;
 		tfdata.write_fd		= data_pipe[1];
 
-		string path (PAM_BIRDIR);
-		path += "/" + user + BIR_EXTENSION;
-y2internal ("path is '%s'", path.c_str());
-// 1. create bir.file in tmpdir
-// 2. move it (and possible rename) in Write
-// 3. remove the old bir file if present in PAM_BIRDIR with org_uid
-// (4. but do not remove the new one of added user of the same name!)
+y2internal ("path is '%s'", bir_path.c_str());
 
-		if (libthinkfinger_set_file (tf, path.c_str ()) < 0)
+		if (libthinkfinger_set_file (tf, bir_path.c_str ()) < 0)
 		{
 		    y2error ("libthinkfinger_set_file failed");
 		    if (tf) libthinkfinger_free (tf);
@@ -241,7 +238,7 @@ y2internal ("path is '%s'", path.c_str());
 		int tf_state = libthinkfinger_acquire (tf);
 		y2milestone ("acquire done with state %d", tf_state);
 		close (data_pipe[1]);
-		libthinkfinger_free (tf);
+		if (tf) libthinkfinger_free (tf);
 		exit (tf_state);		
 	    }
 	    else // parent -> return

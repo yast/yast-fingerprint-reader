@@ -22,11 +22,6 @@ using namespace std;
 
 #include <string>
 
-// for testing only...
-#define MAX_PATH       256
-#define BIR_EXTENSION    ".bir"
-#define PAM_BIRDIR "/etc/pam_thinkfinger"
-
 /**
  * @short An interface class between YaST2 and ThinkFinger Agent
  */
