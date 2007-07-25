@@ -19,7 +19,10 @@ our %TYPEINFO;
 ##--------------------------------------
 ##--------------------- global imports
 
+YaST::YCP::Import ("Directory");
+YaST::YCP::Import ("FileUtils");
 YaST::YCP::Import ("SCR");
+YaST::YCP::Import ("Users");
 
 ##--------------------------------------
 ##--------------------- global variables
@@ -28,9 +31,34 @@ YaST::YCP::Import ("SCR");
 my $error	= "";
 
 my $fingerprint_reader_available = undef;
+
+# path to store fingerprints
+my $bir_path	= "/etc/pam_thinkfinger";
+
+my $name	= "UsersPluginFingerprintReader";
    
 ##----------------------------------------
 ##--------------------- internal functions
+
+# internal function:
+# check if given key (second parameter) is contained in a list (1st parameter)
+# if 3rd parameter is true (>0), ignore case
+sub contains {
+    my ($list, $key, $ignorecase) = @_;
+    if (!defined $list || ref ($list) ne "ARRAY" || @{$list} == 0) {
+	return 0;
+    }
+    if ($ignorecase) {
+        if ( grep /^\Q$key\E$/i, @{$list} ) {
+            return 1;
+        }
+    } else {
+        if ( grep /^\Q$key\E$/, @{$list} ) {
+            return 1;
+        }
+    }
+    return 0;
+}
 
 # helper, check if Fingerprint Reader was already configured
 #FIXME do a pam-config query
@@ -47,6 +75,52 @@ sub is_fingerprint_reader_available {
 	$fingerprint_reader_available = (@devices > 0);
     }
     return $fingerprint_reader_available;
+}
+
+# check if given user has fingerprint authentication configured
+sub fingerprint_present {
+
+    my ($data) = @_;
+    my $username	= $data->{"uid"};
+    return 0 if !$username;
+    my $org_username	= $data->{"org_user"}{"uid"} || $username;
+    my $org_bir_file	= "$bir_path/$org_username.bir";
+    return (FileUtils->Exists ($org_bir_file));
+}
+
+# check if bir file name corresponds with username
+sub adapt_fingerprint_info {
+
+    my ($config, $data) = @_;
+    my $username	= $data->{"uid"};
+    my $org_username	= $data->{"org_user"}{"uid"} || $username;
+    my $bir_file	= $data->{"bir_file"};
+    return $data if !defined $username;
+    if (!defined $bir_file && $username ne $org_username) {
+	# When user was only renamed, but new fingerprint was not generated,
+	# there's no 'bir_file' entry in the map ->
+	# backup his original bir file to tmpdir so it won't get lost and can
+	# be correctly renamed in Write.
+	my $org_bir_file	= "$bir_path/$org_username.bir";
+	if (FileUtils->Exists ($org_bir_file)) {
+	    my $tmpdir	= Directory->tmpdir ();
+	    SCR->Execute (".target.bash", "/bin/cp $org_bir_file $tmpdir/$username.bir");
+	    $data->{"bir_file"}	= $username;
+	}
+    }
+    if ($bir_file && $bir_file ne $username) {
+	$data->{"bir_file"}	= $username;
+    }
+    return $data;
+}
+
+# update the object data when removing plugin
+sub remove_plugin_data {
+
+    my ($config, $data)		= @_;
+    $data->{"bir_file"}		= "";
+    $data->{"plugin_modified"}	= 1;
+    return $data;
 }
 
 ##------------------------------------------
@@ -72,7 +146,11 @@ sub Interface {
 	    "PluginRemovable",
 	    "Error",
 	    "AddBefore",
+	    "Add",
 	    "EditBefore",
+	    "Edit",
+	    "Delete",
+	    "Write"
     );
     return \@interface;
 }
@@ -112,10 +190,15 @@ sub Summary {
 BEGIN { $TYPEINFO{PluginPresent} = ["function", "boolean", "any", "any"];}
 sub PluginPresent {
 
-    my $self	= shift;
+    my ($self, $config, $data)  = @_;
+    return 0 if not fingerprint_reader_configured ();
 
-    # it is present every time it is available
-    return fingerprint_reader_configured ();
+    if (contains ($data->{'plugins'}, $name, 1) || fingerprint_present ($data))
+    {
+	y2milestone ("$name plugin present");
+	return 1;
+    }
+    return 0;
 }
 
 ##------------------------------------
@@ -123,7 +206,7 @@ sub PluginPresent {
 BEGIN { $TYPEINFO{PluginRemovable} = ["function", "boolean", "any", "any"];}
 sub PluginRemovable {
     # doesn't have sense to remove
-    return YaST::YCP::Boolean (0);
+    return YaST::YCP::Boolean (1);
 }
 
 
@@ -174,6 +257,19 @@ sub AddBefore {
     return $data;
 }
 
+# This will be called at the end of Users::Add* :
+# modify the object map with fingerprint-reader data
+BEGIN { $TYPEINFO{Add} = ["function", ["map", "string", "any"], "any", "any"];}
+sub Add {
+
+    my ($self, $config, $data)  = @_;
+    if (contains ($data->{'plugins_to_remove'}, $name, 1)) {
+	y2milestone ("removing plugin $name...");
+	return remove_plugin_data ($config, $data);
+    }
+    return adapt_fingerprint_info ($config, $data);
+}
+
 # this will be called at the beggining of Users::Edit
 BEGIN { $TYPEINFO{EditBefore} = ["function",
     ["map", "string", "any"],
@@ -191,7 +287,70 @@ sub EditBefore {
     return $data;
 }
 
-#FIXME in Write, solve user renaming
+# This will be called at the end of Users::Edit* :
+# modify the object map with fingerprint-reader data
+BEGIN { $TYPEINFO{Edit} = ["function",
+    ["map", "string", "any"],
+    "any", "any"];
+}
+sub Edit {
+
+    my ($self, $config, $data)  = @_;
+    # "plugins_to_remove" is list of plugins which are set for removal
+    if (contains ($data->{'plugins_to_remove'}, $name, 1)) {
+	y2milestone ("removing plugin $name...");
+	return remove_plugin_data ($config, $data);
+    }
+    return adapt_fingerprint_info ($config, $data);
+}
+
+
+# What should be done after user is finally written (this is called only once):
+# - remove org_username.bir file,
+#  but only when there is no other (new) user of that name
+# - move temporary bir file to correct location
+BEGIN { $TYPEINFO{Write} = ["function", "boolean", "any", "any"];}
+sub Write {
+
+    my ($self, $config, $data)  = @_;
+
+    my $username	= $data->{"uid"};
+    my $org_username	= $data->{"org_user"}{"uid"} || $username;
+    my $bir_file	= $data->{"bir_file"};
+    my $org_bir_file	= "$bir_path/$org_username.bir";
+
+    if (($config->{"modified"} || "") eq "deleted") {
+	# check if some new user doesn't have the name of the deleted one
+	my $u	= Users->GetUserByName ($org_username, "");
+	if (!defined $u->{"bir_file"}) {
+	    $bir_file	= "";
+	}
+    }
+    return if (!$username || ! defined $bir_file);
+    if ($username ne $org_username) {
+	# check if there was old bir-file
+	my $u	= Users->GetUserByName ($org_username, "");
+	# do not delete birfile when some new user was added with the name
+	# of this one's original name
+	if (!defined $u->{"bir_file"} && FileUtils->Exists ($org_bir_file)) {
+	    y2milestone ("removing old file $org_bir_file owned by $username");
+	    SCR->Execute (".target.bash", "/bin/rm $org_bir_file");
+	}
+    }
+    elsif ($bir_file eq "" && FileUtils->Exists ($org_bir_file)) {
+	# disable fingerprint authentication for this user
+	# (now $org_username is same as $username)
+	y2milestone ("removing file $org_bir_file for user $username");
+	SCR->Execute (".target.bash", "/bin/rm $org_bir_file");
+    }
+    if ($bir_file) {
+	my $bir_file_path	= Directory->tmpdir ();
+        $bir_file_path	= "$bir_file_path/$bir_file.bir";
+        y2milestone ("moving $bir_file_path to $bir_path/");
+	SCR->Execute (".target.bash", "/bin/mv $bir_file_path $bir_path/");
+    }
+    return YaST::YCP::Boolean (1);
+}
 
 
 42
