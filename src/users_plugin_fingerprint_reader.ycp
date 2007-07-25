@@ -16,10 +16,11 @@
  */
 
 {
-    textdomain "fingerprint-reader"; // use own textdomain for new plugins
+    textdomain "fingerprint-reader";
 
+    import "Directory";
     import "Label";
-    import "Popup";
+    import "Users";
     import "UsersPluginFingerprintReader";
     import "Wizard";
 
@@ -50,7 +51,15 @@
     else if (func == "Dialog") {
 
 	string caption	= UsersPluginFingerprintReader::Name (config, $[]);
-	string help_text = _("<p></p>");
+	// help text for fingerprint reader plugin
+	string help_text = _("<p>Enroll your finger on the fingerprint reader. Three succefull attempt are needed to save the new fingerprint.</p>");
+	string username	= data["uid"]:"";
+	if (username == "")
+	{
+	    y2error ("user name is empty!");
+	    return `back;
+	}
+	string bir_path	= Directory::tmpdir + "/" + username + ".bir";
 
 	term contents = `HBox (`HSpacing (1.5), `VBox(
 	    `VSpacing(0.5),
@@ -60,11 +69,6 @@
 	    ),
 	    `ReplacePoint (`id (`rpstatus), `VSpacing ()),
 	    `PushButton (`id (`cancel), Label::CancelButton ()),
-	    /*
-	    `PushButton (`id (`done), Label::OKButton ()),
-	    `LogView (`id (`tftool), "", 10, 0),
-	    `PushButton (`id (`cancel), Label::CancelButton ()),
-	    */
 	    `VSpacing (0.5)
 	    ),
 	    `HSpacing (1.5)
@@ -83,7 +87,7 @@
 
 	boolean exit		= false;
 	any ui			= nil;
-	integer exit_status	= 255;
+	integer exit_status	= 256;
 	integer	swipe_success	= 0;
 	integer swipe_failed	= 0;
 
@@ -96,8 +100,7 @@
 		swipe_success, swipe_failed)
 	    ));
 	}
-
-	if (SCR::Execute (.thinkfinger.add-user, data["uid"]:"") != true)
+	if (SCR::Execute (.thinkfinger.add-user, bir_path) != true)
 	{
 	    ui = `cancel;
 	    // status message
@@ -166,21 +169,13 @@ y2internal ("statemap is nil - error?");
 
 	    if (ui == `cancel || ui == `back)
 	    {
-y2internal ("ui: %1", ui);
 		SCR::Execute (.thinkfinger.cancel);
 		y2internal ("exit status after cancel: %1", SCR::Read (.thinkfinger.exit_status));
 		break;
 	    }
-	    /*
-	    if (ui == `done)
-	    {
-		y2internal ("exit status: %1", SCR::Read (.thinkfinger.exit_status));
-		break;
-	    }
-	    */
 	    sleep (100);
 	}
-y2milestone ("exit status: %1", exit_status);
+	y2milestone ("agent exit status: %1", exit_status);
 	// 9 is failed acquire, 253 is USB error, 254 communication error
 	// FIXME what's the meaning of TF_STATE_ENROLL_SUCCESS (7)?
 	if (exit_status == 7 || exit_status == 8)
@@ -203,7 +198,7 @@ y2milestone ("exit status: %1", exit_status);
 	    else if (exit_status == 254)
 		// error message, part 2
 		details = _("Communication with fingerprint reader failed.");
-	    if (exit_status != 255)
+	    if (exit_status != 256)
 	    {
 		UI::ReplaceWidget (`id (`rp), `Label (error));
 		if (details != "")
@@ -212,12 +207,22 @@ y2milestone ("exit status: %1", exit_status);
 	    Wizard::EnableBackButton ();
 	}
 	UI::ChangeWidget (`id (`cancel), `Enabled, false);
-	UI::UserInput ();
+	ret	= UI::UserInput ();
+	if (ret == `next)
+	{
+	    // modified data to add to user
+	    map<string, any> tmp_data	= $[
+		"bir_file"		: username,
+		"plugin_modified"	: 1
+	    ];
+	    if (data["what"]:"" == "edit_user")
+		Users::EditUser (tmp_data);
+	    else if (data["what"]:"" == "add_user")
+		Users::AddUser (tmp_data);
+	}
 	Wizard::CloseDialog ();
-	ret	= ui;
     }
-    y2debug ("ret=%1", ret);
-    y2milestone("users plugin finished");
+    y2milestone("users plugin finished with %1", ret);
     y2milestone("----------------------------------------");
     return ret;
 }
