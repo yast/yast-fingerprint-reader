@@ -23,22 +23,46 @@ using namespace std;
 #include <string>
 
 /**
+ * The real interface to thinkfinger library
+ * - extra (singleton) class is used to contain signal handler function
+ */
+class ThinkFingerAPI
+{
+
+private:
+    ThinkFingerAPI ();
+	        
+    virtual ~ThinkFingerAPI();
+
+public:
+
+    static ThinkFingerAPI & instance();
+
+    static void catch_sigterm (int);
+
+    int acquire (int, string);
+
+    int test_int;
+
+    libthinkfinger *tf;
+
+    void finalize ();
+
+};
+
+/**
  * @short An interface class between YaST2 and ThinkFinger Agent
  */
 class ThinkFingerAgent : public SCRAgent
 {
-private:
-
-    /**
-     * pid of the child process after fork
-     */
-    pid_t child_pid;
 
 public:
+    
     /**
      * Default constructor.
      */
-    ThinkFingerAgent();
+    ThinkFingerAgent ();
+	        
 
     /**
      * Destructor.
@@ -84,7 +108,10 @@ public:
      */
     int data_pipe[2];
 
-    libthinkfinger *tf;
+    /**
+     * pid of the child process after fork
+     */
+    pid_t child_pid;
 
 };
 

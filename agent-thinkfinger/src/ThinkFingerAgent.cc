@@ -20,8 +20,6 @@ typedef struct {
     int write_fd;
 } s_tfdata;
 
-static bool child_exited	= false;
-
 /**
  * callback function to be called from libthinkfinger_acquire
  * @param state current device status
@@ -34,19 +32,12 @@ static void callback (libthinkfinger_state state, void *data)
 	y2error("write to pipe failed: %d (%m)", errno);
 }
 
-// handler for SIGCHLD signal (child exited)
-static void catch_child_exit (int sig_num)
-{
-    child_exited	= true;
-}
-
 /**
  * Constructor
  */
 ThinkFingerAgent::ThinkFingerAgent() : SCRAgent()
 {
     child_pid		= -1;
-    child_exited	= false;
 }
 
 /**
@@ -54,6 +45,87 @@ ThinkFingerAgent::ThinkFingerAgent() : SCRAgent()
  */
 ThinkFingerAgent::~ThinkFingerAgent()
 {
+}
+
+// return the only instance of the class
+ThinkFingerAPI& ThinkFingerAPI::instance()
+{
+    static ThinkFingerAPI _instance; // The singleton
+    return _instance;
+}
+
+// handler for SIGTERM signal (it is necessary to kill the process when
+// user his Cancel)
+void ThinkFingerAPI::catch_sigterm (int sig_num)
+{
+    instance().finalize ();
+    exit (256);
+}
+
+// de-initialize finger print reader (must be called at the end!)
+void ThinkFingerAPI::finalize ()
+{
+    if (instance().tf != NULL)
+    {
+	libthinkfinger_free (instance().tf);
+	instance().tf	= NULL;
+    }
+}
+
+ThinkFingerAPI::ThinkFingerAPI()
+{
+    tf			= NULL;
+}
+
+ThinkFingerAPI::~ThinkFingerAPI ()
+{
+}
+
+/**
+ * wrapper for libthinkfinger_acquire function;
+ * - we need to take care of the errors and signals
+ * @param file descriptor of the pipe
+ * @param path to the target bir file
+ */
+int ThinkFingerAPI::acquire (int write_fd, string bir_path)
+{
+    signal (15, catch_sigterm);
+
+    int retval	= 255;
+    s_tfdata tfdata;
+    tfdata.write_fd		= write_fd;
+
+    libthinkfinger_init_status init_status;
+    instance().tf = libthinkfinger_new (&init_status);
+    if (init_status != TF_INIT_SUCCESS) {
+	y2error ("libthinkfinger_new failed");
+	instance().finalize ();
+	retval	= INIT_FAILED;
+	write (write_fd, &retval, sizeof(libthinkfinger_state));
+	return retval;
+    }
+
+    if (libthinkfinger_set_file (instance().tf, bir_path.c_str ()) < 0)
+    {
+	y2error ("libthinkfinger_set_file failed");
+	instance().finalize ();
+	retval	= SET_FILE_FAILED;
+	write (write_fd, &retval, sizeof(libthinkfinger_state));
+	return retval;		
+    }
+    if (libthinkfinger_set_callback (instance().tf, callback, &tfdata) < 0)
+    {
+	y2error ("libthinkfinger_set_callback failed");
+	instance().finalize ();
+	retval	= SET_CALLBACK_FAILED;
+	write (write_fd, &retval, sizeof(libthinkfinger_state));
+	return retval;		
+    }
+    retval = libthinkfinger_acquire (ThinkFingerAPI::instance().tf);
+    y2milestone ("acquire done with state %d", retval);
+    instance().finalize ();
+    signal (15, SIG_DFL);
+    return retval;
 }
 
 /**
@@ -64,7 +136,6 @@ YCPList ThinkFingerAgent::Dir(const YCPPath& path)
     y2error("Wrong path '%s' in Dir().", path->toString().c_str());
     return YCPNull();
 }
-
 
 /**
  * Read
@@ -84,12 +155,12 @@ YCPValue ThinkFingerAgent::Read(const YCPPath &path, const YCPValue& arg, const 
 	    ret = YCPString ("error_message");
 	}
 	else if (PC(0) == "state") {
+	    YCPMap retmap;
 	    if (!child_pid)
 	    {
 		y2error ("ThinkFinger not initialized yet!");
 		return ret;
 	    }
-	    YCPMap retmap;
 	    int state;
 	    size_t size	= sizeof (libthinkfinger_state);
 	    int retval = read (data_pipe[0], &state, size);
@@ -99,17 +170,13 @@ YCPValue ThinkFingerAgent::Read(const YCPPath &path, const YCPValue& arg, const 
 		    y2error ("error reading from pipe: %d (%m)", errno);
 	    }
 	    else if (retval == size) {
-		if (state == SET_FILE_FAILED || state == SET_CALLBACK_FAILED)
+		if (state == INIT_FAILED ||
+		    state == SET_FILE_FAILED || state == SET_CALLBACK_FAILED)
 		{
 		    y2warning ("some initialization failed (%d)...", state);
 		    return ret;
 		}
 		retmap->add (YCPString ("state"), YCPInteger (state));
-	    }
-	    if (child_exited)
-	    {
-		y2warning ("looks like child exited...");
-		return ret;
 	    }
 	    return retmap;
 	}
@@ -118,9 +185,17 @@ YCPValue ThinkFingerAgent::Read(const YCPPath &path, const YCPValue& arg, const 
 y2internal ("waiting for child exit...");
 	    int status;
 	    int retval	= 255;
+//FIXME in case of
+//Warning: usb_bulk_read expected to read 0x40 (read 0x34 bytes).
+//child doesn't exit...
 	    wait (&status);
-	    if (WIFEXITED (status))
+	    if (WIFSIGNALED (status))
+		y2milestone ("child process was killed");
+	    else if (WIFEXITED (status))
+	    {
 		retval	= WEXITSTATUS (status);
+y2milestone ("retval is %d", retval);
+	    }
 	    ret = YCPInteger (retval);
 	    close (data_pipe[0]); // close FD for reading
 	}
@@ -159,7 +234,6 @@ y2internal ("killing child process with pid %d", child_pid);
 	    if (child_pid)
 		kill (child_pid, 15);
 	    child_pid	= -1;
-	    if (tf) libthinkfinger_free (tf);
 	    ret = YCPBoolean (true);
 	}
 	/**
@@ -167,14 +241,14 @@ y2internal ("killing child process with pid %d", child_pid);
 	 * /tmp/YaST-123-456/hh.bir
 	 */
 	else if (PC(0) == "add-user") {
-	    string bir_path;
+	    string path;
 	    if (!val.isNull())
 	    {
-		bir_path = val->asString()->value();
+		path = val->asString()->value();
 	    }
 	    else
 	    {
-		y2error ("username is missing");
+		y2error ("path to bir file is missing");
 		return ret;
 	    }
 	    if (pipe (data_pipe) == -1) {
@@ -182,12 +256,6 @@ y2internal ("killing child process with pid %d", child_pid);
 		return ret;
 	    }
 
-	    libthinkfinger_init_status init_status;
-	    tf = libthinkfinger_new (&init_status);
-	    if (init_status != TF_INIT_SUCCESS) {
-		y2error ("libthinkfinger_new failed");
-		return ret;
-	    }
 	    long arg;
 	    arg = fcntl (data_pipe[0], F_GETFL);
 	    if (fcntl (data_pipe[0], F_SETFL, arg | O_NONBLOCK ) < 0)
@@ -197,7 +265,6 @@ y2internal ("killing child process with pid %d", child_pid);
 		close (data_pipe[1]);
 		return ret;
 	    }
-	    signal (SIGCHLD, catch_child_exit);
 	    child_pid	= fork ();
 	    if (child_pid == -1)
 	    {
@@ -206,40 +273,12 @@ y2internal ("killing child process with pid %d", child_pid);
 	    }
 	    else if (child_pid == 0)
 	    {
-		// child: call the acquire function, callback gives the
-		// actual information to parent
-		
 		close (data_pipe[0]); // close the read-only FD
-
-		static int retval	= 255;
-		s_tfdata tfdata;
-		tfdata.write_fd		= data_pipe[1];
-
-y2internal ("path is '%s'", bir_path.c_str());
-
-		if (libthinkfinger_set_file (tf, bir_path.c_str ()) < 0)
-		{
-		    y2error ("libthinkfinger_set_file failed");
-		    if (tf) libthinkfinger_free (tf);
-		    retval		= SET_FILE_FAILED;
-		    write (data_pipe[1], &retval, sizeof(libthinkfinger_state));
-		    close (data_pipe[1]);
-		    exit (retval);		
-		}
-		if (libthinkfinger_set_callback (tf, callback, &tfdata) < 0)
-		{
-		    y2error ("libthinkfinger_set_callback failed");
-		    if (tf) libthinkfinger_free (tf);
-		    retval		= SET_CALLBACK_FAILED;
-		    write (data_pipe[1], &retval, sizeof(libthinkfinger_state));
-		    close (data_pipe[1]);
-		    exit (retval);		
-		}
-		int tf_state = libthinkfinger_acquire (tf);
-		y2milestone ("acquire done with state %d", tf_state);
+		int state =
+		    ThinkFingerAPI::instance().acquire (data_pipe[1], path);
+		y2milestone ("acquire done with state %d", state);
 		close (data_pipe[1]);
-		if (tf) libthinkfinger_free (tf);
-		exit (tf_state);		
+		exit (state);
 	    }
 	    else // parent -> return
 	    {
