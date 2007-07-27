@@ -7,10 +7,9 @@ client_DATA =			\
 	users_plugin_fingerprint_reader.ycp
 
 ynclude_DATA =			\
-	helps.ycp		\
 	wizards.ycp		\
 	dialogs.ycp		\
-	complex.ycp
+	helps.ycp
 
 desktop_DATA =			\
 	fingerprint-reader.desktop
