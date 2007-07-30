@@ -35,6 +35,7 @@ import "Confirm";
 import "FileUtils";
 import "FingerprintReader";
 import "Label";
+import "Package";
 import "Popup";
 import "Stage";
 import "Wizard";
@@ -79,10 +80,10 @@ any FingerprintReaderDialog() {
     // help text
     string help_text = _("<p>
 <b><big>Fingerprint Authentication</big></b><br>
-The Fingerprint Reader configuration updates your PAM settings to enable authentication with fingerprints.</p>") +
+The Fingerprint Reader Configuration updates your PAM settings to enable authentication with fingerprints.</p>") +
 
     // help text, cont.
-    _("<p>To <b>import fingerprint files</b> from different system or previous installation, choose the directory with their location.</p>");
+    _("<p>To <b>import fingerprint files</b> from different installations, choose the directory where the files are located.</p>");
 
     term con = `HBox (`HSpacing (3), `VBox (
 	// frame label
@@ -126,7 +127,7 @@ The Fingerprint Reader configuration updates your PAM settings to enable authent
 	ret = UI::UserInput();
 	string import_dir = (string)UI::QueryWidget (`id (`import_dir), `Value);
 
-        if (ret == `pamyes || result == `pamno)
+        if (ret == `pamyes || ret == `pamno)
 	{
             use_pam = (ret == `pamyes);
 	    UI::ChangeWidget (`id (`import_dir), `Enabled, use_pam);

@@ -52,7 +52,8 @@
 
 	string caption	= UsersPluginFingerprintReader::Name (config, $[]);
 	// help text for fingerprint reader plugin
-	string help_text = _("<p>Enroll your finger on the fingerprint reader. Three succefull attempt are needed to save the new fingerprint.</p>");
+	string help_text = _("<p>Swipe your finger on the fingerprint reader. Three successful attempts  
+are needed to save the new fingerprint.</p>");
 	string username	= data["uid"]:"";
 	if (username == "")
 	{

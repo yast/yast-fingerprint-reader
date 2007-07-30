@@ -71,7 +71,9 @@ sub fingerprint_reader_configured {
 sub is_fingerprint_reader_available {
 
     if (not defined $fingerprint_reader_available) {
-	my @devices	= @{SCR->Read (".probe.fingerprint")};
+	my $probe	= SCR->Read (".probe.fingerprint");
+	my @devices	= ();
+	@devices	= @{$probe} if (ref $probe eq "ARRAY");
 	$fingerprint_reader_available = (@devices > 0);
     }
     return $fingerprint_reader_available;
