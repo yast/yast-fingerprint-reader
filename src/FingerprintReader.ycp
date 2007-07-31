@@ -35,6 +35,7 @@
 module "FingerprintReader";
 textdomain "fingerprint-reader";
 
+import "Arch";
 import "Pam";
 import "Popup";
 import "Progress";
@@ -48,9 +49,18 @@ global boolean modified = false;
 
 /**
  * Required packages for this module to operate
- * FIXME UpdatedArchPackages ???
  */
 global list<string> required_packages = ["pam_thinkfinger"];
+
+// packages to install for specific architectures (see e.g. #224510)
+global map arch_packages	= $[
+    "pam_thinkfinger"	: $[
+        "ia64"		: [ "pam_thinkfinger-x86" ],
+        "ppc64"		: [ "pam_thinkfinger-64bit" ],
+        "s390_64"	: [ "pam_thinkfinger-32bit" ],
+        "x86_64"	: [ "pam_thinkfinger-32bit" ],
+    ],
+];
 
 /**
  * Write only, used during autoinstallation.
@@ -221,6 +231,21 @@ global define string ShortSummary() {
 	_("Yes") :
 	// summary value
 	_("No"));
+}
+
+/**
+ * Return list of architecture specific packages (derived from package list
+ * given as parameter) merged with the packages in parameter
+ */
+global define list<string> UpdatedArchPackages (list<string> packages) {
+
+    list<string> ret	= packages;
+    string arch		= Arch::architecture ();
+
+    foreach (string package, packages, {
+        ret	= (list<string>) union (ret, arch_packages[package,arch]:[]);
+    });
+    return ret;
 }
 
 /**

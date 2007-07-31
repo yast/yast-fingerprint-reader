@@ -120,6 +120,7 @@ The Fingerprint Reader Configuration updates your PAM settings to enable authent
 	Wizard::HideAbortButton ();
 
     UI::ChangeWidget (`id (`import_dir), `Enabled, use_pam);
+    UI::ChangeWidget (`id (`browse), `Enabled, use_pam);
 
     any ret = nil;
     while (true) {
@@ -131,6 +132,7 @@ The Fingerprint Reader Configuration updates your PAM settings to enable authent
 	{
             use_pam = (ret == `pamyes);
 	    UI::ChangeWidget (`id (`import_dir), `Enabled, use_pam);
+	    UI::ChangeWidget (`id (`browse), `Enabled, use_pam);
 	}
 
 	if (ret == `abort || ret == `cancel || ret == `back) {
@@ -157,11 +159,14 @@ does not point to the valid directory."));
 		continue;
 	    }
 	    if (use_pam &&
-		!Package::InstallAll (FingerprintReader::required_packages))
+		!Package::InstallAll (FingerprintReader::UpdatedArchPackages (
+		    FingerprintReader::required_packages))
+	    )
 	    {
 		use_pam     = false;
 		UI::ChangeWidget (`id (`rd), `Value, `pamno);
 		UI::ChangeWidget (`id (`import_dir), `Enabled, use_pam);
+		UI::ChangeWidget (`id (`browse), `Enabled, use_pam);
 		continue;
 	    }
 	    if (use_pam != FingerprintReader::use_pam ||
