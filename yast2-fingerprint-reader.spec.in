@@ -1,11 +1,9 @@
 @HEADER-COMMENT@
 
 @HEADER@
-BuildRequires:	libthinkfinger
-Requires:	yast2
-BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-devtools yast2-testsuite
-
-BuildArchitectures:	noarch
+Requires:	yast2 yast2-pam
+BuildRequires:	libthinkfinger libusb-devel
+BuildRequires:	doxygen gcc-c++ yast2-core-devel perl-XML-Writer update-desktop-files yast2 yast2-devtools yast2-testsuite yast2-pam
 
 Conflicts:	yast2-hardware-detection < 2.15.7
 
@@ -27,6 +25,10 @@ Summary:	Configuration of fingerprint reader
 %dir @yncludedir@/fingerprint-reader
 @yncludedir@/fingerprint-reader/*
 @clientdir@/fingerprint-reader.ycp
+@clientdir@/users_plugin_fingerprint_reader.ycp
 @moduledir@/FingerprintReader.*
+@moduledir@/UsersPluginFingerprintReader.pm
 @desktopdir@/fingerprint-reader.desktop
+@scrconfdir@/*.scr
+@plugindir@/libpy2ag_thinkfinger.*
 %doc @docdir@
