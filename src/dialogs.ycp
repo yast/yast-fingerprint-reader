@@ -116,6 +116,7 @@ The Fingerprint Reader Configuration updates your PAM settings to enable authent
         Stage::cont () ? Label::BackButton () : Label::CancelButton (),
 	Stage::cont () ? Label::NextButton () : Label::FinishButton ()
     );
+    Wizard::SetTitleIcon ("yast-fingerprint");
     if (!Stage::cont ())
 	Wizard::HideAbortButton ();
 
