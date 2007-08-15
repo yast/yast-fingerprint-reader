@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Wed Aug 15 09:12:05 CEST 2007 - jsuchome@suse.cz
+
+- use Pam module to check the status and FingerprintReader.ycp for
+  devices listing
+- mkdir /etc/pam_thinkfinger if not present
+- 2.15.2 
+
+-------------------------------------------------------------------
 Tue Aug 14 09:26:55 CEST 2007 - jsuchome@suse.cz
 
 - fixed text in .desktop file, changed icon name

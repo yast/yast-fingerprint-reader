@@ -36,6 +36,7 @@ module "FingerprintReader";
 textdomain "fingerprint-reader";
 
 import "Arch";
+import "FileUtils";
 import "Pam";
 import "Popup";
 import "Progress";
@@ -106,7 +107,7 @@ global boolean Read() {
     {
 	// error popup: no config of non-existent device
 	Report::Error (_("Fingerprint reader device is not available on this system."));
-//	return false;
+	return false;
     }
 
     use_pam	= Pam::Enabled ("thinkfinger");
@@ -160,6 +161,10 @@ global boolean Write() {
     Progress::NextStage();
     if (use_pam && import_dir != "")
     {
+	if (!FileUtils::Exists (bir_dir))
+	{
+	    SCR::Execute (.target.mkdir, bir_dir);
+	}
 	map out = (map) SCR::Execute (.target.bash_output,
 	    sformat ("/bin/cp %1/*.bir %2/", import_dir, bir_dir));
 	if (out["stderr"]:"" != "")

@@ -21,6 +21,8 @@ our %TYPEINFO;
 
 YaST::YCP::Import ("Directory");
 YaST::YCP::Import ("FileUtils");
+YaST::YCP::Import ("FingerprintReader");
+YaST::YCP::Import ("Pam");
 YaST::YCP::Import ("SCR");
 YaST::YCP::Import ("Users");
 
@@ -61,19 +63,16 @@ sub contains {
 }
 
 # helper, check if Fingerprint Reader was already configured
-#FIXME do a pam-config query
 sub fingerprint_reader_configured {
 
-    return YaST::YCP::Boolean (1);
+    return Pam->Enabled ("thinkfinger");
 }
 
 # helper function: check if Fingerprint Reader (the device) is available
 sub is_fingerprint_reader_available {
 
     if (not defined $fingerprint_reader_available) {
-	my $probe	= SCR->Read (".probe.fingerprint");
-	my @devices	= ();
-	@devices	= @{$probe} if (ref $probe eq "ARRAY");
+	my @devices	= @{FingerprintReader->ReadFingerprintReaderDevices ()};
 	$fingerprint_reader_available = (@devices > 0);
     }
     return $fingerprint_reader_available;
