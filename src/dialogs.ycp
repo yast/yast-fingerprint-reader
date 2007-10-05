@@ -104,7 +104,7 @@ The Fingerprint Reader Configuration updates your PAM settings to enable authent
 	`VSpacing (),
 	`HBox (
 	    // textentry label
-	    `TextEntry (`id(`import_dir),_("Directory with fingerprint files")),
+	    `TextEntry (`id(`import_dir),_("&Directory with fingerprint files")),
 	    `VBox (
 		`Label (""),
 		`PushButton (`id (`browse), Label::BrowseButton ())
@@ -166,6 +166,16 @@ does not point to the valid directory."));
 	    {
 		use_pam     = false;
 		UI::ChangeWidget (`id (`rd), `Value, `pamno);
+		UI::ChangeWidget (`id (`import_dir), `Enabled, use_pam);
+		UI::ChangeWidget (`id (`browse), `Enabled, use_pam);
+		continue;
+	    }
+	    if (!use_pam &&
+		!Package::RemoveAll (FingerprintReader::UpdatedArchPackages (
+		    FingerprintReader::required_packages)))
+	    {
+		use_pam	= true;
+		UI::ChangeWidget (`id (`rd), `Value, `pamyes);
 		UI::ChangeWidget (`id (`import_dir), `Enabled, use_pam);
 		UI::ChangeWidget (`id (`browse), `Enabled, use_pam);
 		continue;

@@ -37,7 +37,7 @@ textdomain "fingerprint-reader";
 
 import "Arch";
 import "FileUtils";
-import "Pam";
+import "Package";
 import "Popup";
 import "Progress";
 import "Report";
@@ -110,7 +110,7 @@ global boolean Read() {
 	return false;
     }
 
-    use_pam	= Pam::Enabled ("thinkfinger");
+    use_pam	= Package::Installed ("pam_thinkfinger");
 
     modified = false;
     return true;
@@ -132,14 +132,14 @@ global boolean Write() {
     sleep(sl);
 
     // We do not set help text here, because it was set outside
-    Progress::New(caption, " ", 2, [
+    Progress::New(caption, " ", 1, [
 	    // Progress stage
-	    _("Write the PAM settings"),
+//	    _("Write the PAM settings"),
 	    // Progress stage
 	    _("Import fingerprint files"),
 	], [
 	    // Progress step
-	    _("Writing the PAM settings..."),
+//	    _("Writing the PAM settings..."),
 	    // Progress step
 	    _("Importing fingerprint files..."),
 	    // Progress finished
@@ -148,6 +148,7 @@ global boolean Write() {
 	""
     );
 
+    /* no PAM writing on SLE10, everything is done by pam_thinkfinger package
     Progress::NextStage();
 
     boolean pam_ret	= use_pam ?
@@ -157,6 +158,7 @@ global boolean Write() {
 	Report::Error (_("Cannot write PAM settings."));
 
     sleep(sl);
+    */
 
     Progress::NextStage();
     if (use_pam && import_dir != "")
@@ -213,7 +215,7 @@ global map Export () {
 global list Summary() {
 
     // summary header
-    string summary = Summary::AddHeader(summary, _("PAM Login"));
+    string summary = Summary::AddHeader("", _("PAM Login"));
 
     summary = Summary::AddLine (summary, (use_pam) ?
 	// summary item

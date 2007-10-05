@@ -22,7 +22,7 @@ our %TYPEINFO;
 YaST::YCP::Import ("Directory");
 YaST::YCP::Import ("FileUtils");
 YaST::YCP::Import ("FingerprintReader");
-YaST::YCP::Import ("Pam");
+YaST::YCP::Import ("Package");
 YaST::YCP::Import ("SCR");
 YaST::YCP::Import ("Users");
 
@@ -65,7 +65,8 @@ sub contains {
 # helper, check if Fingerprint Reader was already configured
 sub fingerprint_reader_configured {
 
-    return Pam->Enabled ("thinkfinger");
+    # in SLE10SP1, pam_thinkfinger package handles the PAM stuff itself
+    return Package->Installed ("pam_thinkfinger");
 }
 
 # helper function: check if Fingerprint Reader (the device) is available
@@ -206,7 +207,6 @@ sub PluginPresent {
 # Is it possible to remove this plugin from user?
 BEGIN { $TYPEINFO{PluginRemovable} = ["function", "boolean", "any", "any"];}
 sub PluginRemovable {
-    # doesn't have sense to remove
     return YaST::YCP::Boolean (1);
 }
 
