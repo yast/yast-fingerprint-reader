@@ -1,0 +1,229 @@
+/**
+ * File:
+ *	include/users/users_plugin_fingerprint_reader.ycp
+ *
+ * Package:
+ *	Configuration of Fingerprint Reader
+ *
+ * Summary:
+ *	GUI part of plugin (UsersPluginFingerprintReader) used to manage
+ *	user fingerprints on the appropriate hardware
+ *
+ * Authors:
+ *	Jiri Suchomel <jsuchome@suse.cz>
+ *
+ * $Id$
+ */
+
+{
+    textdomain "fingerprint-reader";
+
+    import "Directory";
+    import "Label";
+    import "Users";
+    import "UsersPluginFingerprintReader";
+    import "Wizard";
+
+    any ret			= nil;
+    string func			= "";
+    map<string,any> config	= $[];
+    map<string,any> data	= $[];
+
+    /* Check arguments */
+    if(size(WFM::Args()) > 0 && is(WFM::Args(0), string)) {
+	func = (string) WFM::Args(0);
+	if(size(WFM::Args()) > 1 && is(WFM::Args(1), map))
+	    config = (map<string,any>)WFM::Args(1);
+	if(size(WFM::Args()) > 2 && is(WFM::Args(2), map))
+	    data = (map<string,any>)WFM::Args(2);
+    }
+    y2milestone("----------------------------------------");
+    y2milestone("users plugin started: FingerprintReader");
+
+    y2debug ("func=%1, config=%2, data=%3", func,config,data);
+
+    if (func == "Summary") {
+	ret = UsersPluginFingerprintReader::Summary (config, $[]);
+    }
+    else if (func == "Name") {
+	ret = UsersPluginFingerprintReader::Name (config, $[]);
+    }
+    else if (func == "Dialog") {
+
+	string caption	= UsersPluginFingerprintReader::Name (config, $[]);
+	// help text for fingerprint reader plugin
+	string help_text = _("<p>Swipe your finger on the fingerprint reader. Three successful attempts  
+are needed to save the new fingerprint.</p>");
+	string username	= data["uid"]:"";
+	if (username == "")
+	{
+	    y2error ("user name is empty!");
+	    return `back;
+	}
+	string bir_path	= Directory::tmpdir + "/" + username + ".bir";
+
+	term contents = `HBox (`HSpacing (1.5), `VBox(
+	    `VSpacing(0.5),
+	    `ReplacePoint (`id (`rp),
+		// status label
+		`Label (`id (`label), _("Initializing fingerprint reader..."))
+	    ),
+	    `ReplacePoint (`id (`rpstatus), `VSpacing ()),
+	    `PushButton (`id (`cancel), Label::CancelButton ()),
+	    `VSpacing (0.5)
+	    ),
+	    `HSpacing (1.5)
+	);
+
+	Wizard::CreateDialog ();
+	Wizard::SetTitleIcon ("yast-fingerprint");
+
+	// dialog caption
+	Wizard::SetContentsButtons(caption, contents, help_text,
+	    Label::BackButton(), Label::AcceptButton());
+
+	Wizard::HideAbortButton ();
+	Wizard::DisableNextButton ();
+	Wizard::DisableBackButton ();
+
+	boolean exit		= false;
+	any ui			= nil;
+	integer exit_status	= 256;
+	integer	swipe_success	= 0;
+	integer swipe_failed	= 0;
+
+	// helper function, form the string for UI from actuall data
+	void replace_swipe_string () {
+
+	    UI::ReplaceWidget (`id (`rpstatus), `Label (
+		// status message (%1, %2 are numbers)
+		sformat (_("Successful swipes: %1, failed swipes: %2"),
+		swipe_success, swipe_failed)
+	    ));
+	}
+	if (SCR::Execute (.thinkfinger.add-user, bir_path) != true)
+	{
+	    ui = `cancel;
+	    // status message
+	    UI::ReplaceWidget (`id (`rp),
+		`Label (_("Initialization of fingerprint reader failed.")));
+	}
+	while (ui != `cancel)
+	{
+	    map statemap	= (map) SCR::Read (.thinkfinger.state);
+	    if (statemap != nil && statemap != $[])
+	    {
+		integer state	= statemap["state"]:0;
+		switch (state) {
+		    case 8: { // TF_STATE_ACQUIRE_SUCCESS
+			UI::ReplaceWidget (`id (`rp),
+			    // status label
+			    `Label (_("Storing data...")));
+			UI::ReplaceWidget (`id (`rpstatus), `VSpacing ());
+			exit = true;
+			break;
+		    }
+		    case 7: { // TF_STATE_ENROLL_SUCCESS
+			UI::ReplaceWidget (`id (`rp),
+			    // status label
+			    `Label (_("Storing data...")));
+			UI::ReplaceWidget (`id (`rpstatus), `VSpacing ());
+			exit = true;
+			break;
+		    }
+		    case 9: { // TF_STATE_ACQUIRE_FAILED
+			UI::ReplaceWidget (`id (`rp),
+			    `Label (_("Acquiring fingerprint failed.")));
+			exit = true;
+			break;
+		    }
+		    case 2: { // TF_STATE_SWIPE_0
+			UI::ReplaceWidget (`id (`rp),
+			    `Label (_("Please swipe your finger...")));
+			break;
+		    }
+		    case 5: { // TF_STATE_SWIPE_SUCCESS
+			swipe_success	= swipe_success + 1;
+			replace_swipe_string ();
+			break;
+		    }
+		    case 6: { // TF_STATE_SWIPE_AFILED
+			swipe_failed	= swipe_failed + 1;
+			replace_swipe_string ();
+			break;
+		    }
+		}
+	    }
+	    else if (statemap == nil)
+	    {
+y2internal ("statemap is nil - error?");
+		exit_status = (integer) SCR::Read (.thinkfinger.exit_status);
+		break;
+	    }
+	    if (exit)
+	    {
+		exit_status = (integer) SCR::Read (.thinkfinger.exit_status);
+		break;//must be before check for cancel
+	    }
+
+	    ui	= UI::PollInput ();
+
+	    if (ui == `cancel || ui == `back)
+	    {
+		SCR::Execute (.thinkfinger.cancel);
+		y2internal ("exit status after cancel: %1", SCR::Read (.thinkfinger.exit_status));
+		break;
+	    }
+	    sleep (100);
+	}
+	y2milestone ("agent exit status: %1", exit_status);
+	// 9 is failed acquire, 253 is USB error, 254 communication error
+	// FIXME what's the meaning of TF_STATE_ENROLL_SUCCESS (7)?
+	if (exit_status == 7 || exit_status == 8)
+	{
+	    // status label
+	    UI::ReplaceWidget (`id (`rp), `Label (_("Fingerprint acquired successfully.")));
+	    UI::ReplaceWidget (`id (`rpstatus), `Label (""));
+	    // new id was already saved
+	    Wizard::DisableBackButton ();
+	    Wizard::EnableNextButton ();
+	}
+	else
+	{
+	    // error message, part 1
+	    string error	= _("Could not acquire fingerprint.");
+	    string details	= "";
+	    if (exit_status == 253)
+		// error message, part 2
+		details	= _("USB error occured.");
+	    else if (exit_status == 254)
+		// error message, part 2
+		details = _("Communication with fingerprint reader failed.");
+	    if (exit_status != 256)
+	    {
+		UI::ReplaceWidget (`id (`rp), `Label (error));
+		if (details != "")
+		    UI::ReplaceWidget (`id (`rpstatus), `Label (details));
+	    }
+	    Wizard::EnableBackButton ();
+	}
+	UI::ChangeWidget (`id (`cancel), `Enabled, false);
+	ret	= UI::UserInput ();
+	if (ret == `next)
+	{
+	    // modified data to add to user
+	    map<string, any> tmp_data	= $[
+		"bir_file"		: username,
+		"plugin_modified"	: 1
+	    ];
+	    if (data["what"]:"" == "edit_user")
+		Users::EditUser (tmp_data);
+	    else if (data["what"]:"" == "add_user")
+		Users::AddUser (tmp_data);
+	}
+	Wizard::CloseDialog ();
+    }
+    y2milestone("users plugin finished with %1", ret);
+    y2milestone("----------------------------------------");
+    return ret;
+}
