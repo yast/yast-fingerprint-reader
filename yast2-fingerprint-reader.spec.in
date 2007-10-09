@@ -2,10 +2,11 @@
 
 @HEADER@
 Requires:	yast2 yast2-pam
-BuildRequires:	libthinkfinger libusb-devel
+BuildRequires:	libthinkfinger
+#libusb-devel
 BuildRequires:	doxygen gcc-c++ yast2-core-devel perl-XML-Writer update-desktop-files yast2 yast2-devtools yast2-testsuite yast2-pam
 
-Conflicts:	yast2-hardware-detection < 2.15.7
+Conflicts:	yast2-hardware-detection < 2.13.8
 
 Summary:	Configuration of fingerprint reader
 

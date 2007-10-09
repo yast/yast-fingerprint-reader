@@ -2,5 +2,8 @@
 Tue Oct  2 13:48:59 CEST 2007 - jsuchome@suse.cz
 
 - Backport 2.15.2 version for SLE10 (F302658)
+- do not use Pam.ycp, PAM settings are written by pam_thinkfigner
+- Cancel button: send the child process SIGKILL when it is still
+  alive 3 seconds after SIGTERM
 - 2.13.0
 

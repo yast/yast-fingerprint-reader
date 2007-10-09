@@ -156,7 +156,6 @@ are needed to save the new fingerprint.</p>");
 	    }
 	    else if (statemap == nil)
 	    {
-y2internal ("statemap is nil - error?");
 		exit_status = (integer) SCR::Read (.thinkfinger.exit_status);
 		break;
 	    }
@@ -171,7 +170,7 @@ y2internal ("statemap is nil - error?");
 	    if (ui == `cancel || ui == `back)
 	    {
 		SCR::Execute (.thinkfinger.cancel);
-		y2internal ("exit status after cancel: %1", SCR::Read (.thinkfinger.exit_status));
+		y2milestone ("exit status after cancel: %1", SCR::Read (.thinkfinger.exit_status));
 		break;
 	    }
 	    sleep (100);
