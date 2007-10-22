@@ -166,12 +166,19 @@ global boolean Write() {
 	    SCR::Execute (.target.mkdir, bir_dir);
 	}
 	map out = (map) SCR::Execute (.target.bash_output,
-	    sformat ("/bin/cp %1/*.bir %2/", import_dir, bir_dir));
-	if (out["stderr"]:"" != "")
+	    sformat ("find \"%1\" -maxdepth 1 -name \"*.gz\" | wc -l",
+	    import_dir));
+	integer count = tointeger(deletechars(out["stdout"]:"0","\n"));
+	if (count != nil && count > 0)
 	{
-	    // error popup
-	    Popup::ErrorDetails (_("Importing fingerprint files failed."),
-		out["stderr"]:"");
+	    out = (map) SCR::Execute (.target.bash_output,
+		sformat ("/bin/cp %1/*.bir %2/", import_dir, bir_dir));
+	    if (out["stderr"]:"" != "")
+	    {
+		// error popup
+		Popup::ErrorDetails (_("Importing fingerprint files failed."),
+		    out["stderr"]:"");
+	    }
 	}
     }
 

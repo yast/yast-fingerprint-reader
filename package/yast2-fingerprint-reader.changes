@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Mon Oct 22 10:18:32 CEST 2007 - jsuchome@suse.cz
+
+- fixed wrong widget id (#333670)
+- check for presence of bir files in import directory (#333670)
+- 2.16.0
+
+-------------------------------------------------------------------
 Wed Aug 15 09:12:05 CEST 2007 - jsuchome@suse.cz
 
 - use Pam module to check the status and FingerprintReader.ycp for
