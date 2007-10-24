@@ -182,19 +182,15 @@ YCPValue ThinkFingerAgent::Read(const YCPPath &path, const YCPValue& arg, const 
 	}
 	// wait for child exit
 	else if (PC(0) == "exit_status" ) {
-y2internal ("waiting for child exit...");
 	    int status;
 	    int retval	= 255;
-//FIXME in case of
-//Warning: usb_bulk_read expected to read 0x40 (read 0x34 bytes).
-//child doesn't exit...
 	    wait (&status);
 	    if (WIFSIGNALED (status))
 		y2milestone ("child process was killed");
 	    else if (WIFEXITED (status))
 	    {
 		retval	= WEXITSTATUS (status);
-y2milestone ("retval is %d", retval);
+		y2milestone ("retval is %d", retval);
 	    }
 	    ret = YCPInteger (retval);
 	    close (data_pipe[0]); // close FD for reading
@@ -230,10 +226,25 @@ YCPValue ThinkFingerAgent::Execute(const YCPPath &path, const YCPValue& val, con
     if (path->length() == 1) {
  
 	if (PC(0) == "cancel") {
-y2internal ("killing child process with pid %d", child_pid);
+	    y2milestone ("terminanting child process with pid %d", child_pid);
 	    if (child_pid)
-		kill (child_pid, 15);
-	    child_pid	= -1;
+	    {
+		if (kill (child_pid, 15) != -1)
+		{
+		    sleep (3);
+		    int status;
+		    if (waitpid (-1, &status, WNOHANG) == 0)
+		    {
+			y2milestone ("... still alive, killing it", child_pid);
+			kill (child_pid, 9);
+		    }
+		    child_pid	= -1;
+		}
+		else
+		{
+		    y2error ("error while killing: %d (%m)", errno);
+		}
+	    }
 	    ret = YCPBoolean (true);
 	}
 	/**

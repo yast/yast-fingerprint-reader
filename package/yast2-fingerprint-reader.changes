@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Oct 24 09:55:20 CEST 2007 - jsuchome@suse.cz
+
+- Cancel button: send the child process SIGKILL when it is still
+ alive 3 seconds after SIGTERM 
+- 2.16.1
+
+-------------------------------------------------------------------
 Mon Oct 22 10:18:32 CEST 2007 - jsuchome@suse.cz
 
 - fixed wrong widget id (#333670)
