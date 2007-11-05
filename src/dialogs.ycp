@@ -146,7 +146,7 @@ The Fingerprint Reader Configuration updates your PAM settings to enable authent
 	    {
 		if ((findlastof (dir, "/") + 1) == size(dir))
 		    dir = substring (dir, 0, size(dir)-1);
-		UI::ChangeWidget (`id(`home), `Value, dir);
+		UI::ChangeWidget (`id(`import_dir), `Value, dir);
 	    }
 	}
         else if (ret == `next) {
