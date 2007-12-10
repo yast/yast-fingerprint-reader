@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Dec 10 16:21:43 CET 2007 - jsuchome@suse.cz
+
+- merged proofread texts
+- 2.16.2
+
+-------------------------------------------------------------------
 Wed Oct 24 09:55:20 CEST 2007 - jsuchome@suse.cz
 
 - Cancel button: send the child process SIGKILL when it is still

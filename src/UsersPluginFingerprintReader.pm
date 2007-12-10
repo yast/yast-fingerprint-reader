@@ -181,7 +181,7 @@ sub Summary {
 
     my $self	= shift;
     # plugin summary (table item)
-    my $ret 	= __("Set the user's fingerprint");
+    my $ret 	= __("Set the User's Fingerprint");
     return $ret;
 }
 
