@@ -1,0 +1,22 @@
+-------------------------------------------------------------------
+Thu Feb 14 10:09:42 CET 2008 - jsuchome@suse.cz
+
+- added modalias to Supplements, so package could get selected
+  automatically on the systems with UPEK fingerprint reader (#361636)
+- 2.13.2
+
+-------------------------------------------------------------------
+Thu Nov  1 08:14:39 CET 2007 - jsuchome@suse.cz
+
+- fixed wrong widget id (#338323)
+- 2.13.1
+
+-------------------------------------------------------------------
+Tue Oct  2 13:48:59 CEST 2007 - jsuchome@suse.cz
+
+- Backport 2.15.2 version for SLE10 (F302658)
+- do not use Pam.ycp, PAM settings are written by pam_thinkfigner
+- Cancel button: send the child process SIGKILL when it is still
+  alive 3 seconds after SIGTERM
+- 2.13.0
+

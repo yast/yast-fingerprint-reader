@@ -1,0 +1,198 @@
+/* ------------------------------------------------------------------------------
+ * Copyright (c) 2006 Novell, Inc. All Rights Reserved.
+ *
+ *
+ * This program is free software; you can redistribute it and/or modify it under
+ * the terms of version 2 of the GNU General Public License as published by the
+ * Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, contact Novell, Inc.
+ *
+ * To contact Novell about this file by physical or electronic mail, you may find
+ * current contact information at www.novell.com.
+ * ------------------------------------------------------------------------------
+ */
+
+/**
+ * File:	include/fingerprint-reader/dialogs.ycp
+ * Package:	Configuration of fingerprint-reader
+ * Summary:	Dialogs definitions
+ * Authors:	Jiri Suchomel <jsuchome@suse.cz>
+ *
+ * $Id$
+ */
+
+{
+
+textdomain "fingerprint-reader";
+
+import "Confirm";
+import "FileUtils";
+import "FingerprintReader";
+import "Label";
+import "Package";
+import "Popup";
+import "Stage";
+import "Wizard";
+
+include "fingerprint-reader/helps.ycp";
+
+boolean ReallyAbort() {
+    return !FingerprintReader::modified || Popup::ReallyAbort(true);
+}
+
+/**
+ * Read settings dialog
+ * @return `abort if aborted and `next otherwise
+ */
+symbol ReadDialog() {
+    Wizard::RestoreHelp(HELPS["read"]:"");
+    if (!Confirm::MustBeRoot()) return `abort;
+    boolean ret = FingerprintReader::Read();
+    return ret ? `next : `abort;
+}
+
+/**
+ * Write settings dialog
+ * @return `abort if aborted and `next otherwise
+ */
+symbol WriteDialog() {
+    Wizard::RestoreHelp(HELPS["write"]:"");
+    boolean ret = FingerprintReader::Write();
+    return ret ? `next : `abort;
+}
+
+/**
+ * Main configuration dialog
+ * @return dialog result
+ */
+any FingerprintReaderDialog() {
+
+    // FingerprintReader summary dialog caption
+    string caption = _("Fingerprint Reader Configuration");
+
+    boolean use_pam	= FingerprintReader::use_pam;
+    // help text
+    string help_text = _("<p>
+<b><big>Fingerprint Authentication</big></b><br>
+The Fingerprint Reader Configuration updates your PAM settings to enable authentication with fingerprints.</p>") +
+
+    // help text, cont.
+    _("<p>To <b>import fingerprint files</b> from different installations, choose the directory where the files are located.</p>");
+
+    term con = `HBox (`HSpacing (3), `VBox (
+	// frame label
+	`Frame (_("User Authentication"), `HBox(`HSpacing (0.5), `VBox(
+	    `VSpacing (0.5),
+	    `RadioButtonGroup (`id(`rd),
+		`Left (`HVSquash(`VBox (
+		    `Left (`RadioButton (`id(`pamno), `opt (`notify),
+			// radio button label
+			_("Do No&t Use Fingerprint Reader"), !use_pam)),
+		    `Left (`RadioButton (`id(`pamyes), `opt (`notify),
+			// radio button label
+			_("&Use Fingerprint Reader"), use_pam))
+		)))
+	    ),
+	    `VSpacing (0.5)
+	), `HSpacing (0.5))),
+	`VSpacing (),
+	`HBox (
+	    // textentry label
+	    `TextEntry (`id(`import_dir),_("&Directory with fingerprint files")),
+	    `VBox (
+		`Label (""),
+		`PushButton (`id (`browse), Label::BrowseButton ())
+	    )
+	)
+    ), `HSpacing(3));
+
+    Wizard::SetContentsButtons (caption, con, help_text,
+        Stage::cont () ? Label::BackButton () : Label::CancelButton (),
+	Stage::cont () ? Label::NextButton () : Label::FinishButton ()
+    );
+    Wizard::SetTitleIcon ("yast-fingerprint");
+    if (!Stage::cont ())
+	Wizard::HideAbortButton ();
+
+    UI::ChangeWidget (`id (`import_dir), `Enabled, use_pam);
+    UI::ChangeWidget (`id (`browse), `Enabled, use_pam);
+
+    any ret = nil;
+    while (true) {
+
+	ret = UI::UserInput();
+	string import_dir = (string)UI::QueryWidget (`id (`import_dir), `Value);
+
+        if (ret == `pamyes || ret == `pamno)
+	{
+            use_pam = (ret == `pamyes);
+	    UI::ChangeWidget (`id (`import_dir), `Enabled, use_pam);
+	    UI::ChangeWidget (`id (`browse), `Enabled, use_pam);
+	}
+
+	if (ret == `abort || ret == `cancel || ret == `back) {
+	    if(ReallyAbort()) break;
+	    else continue;
+	}
+	else if (ret == `browse) {
+	    string dir = UI::AskForExistingDirectory (import_dir, "");
+	    if (dir != nil)
+	    {
+		if ((findlastof (dir, "/") + 1) == size(dir))
+		    dir = substring (dir, 0, size(dir)-1);
+		UI::ChangeWidget (`id(`import_dir), `Value, dir);
+	    }
+	}
+        else if (ret == `next) {
+	    if (use_pam && import_dir != "" &&
+		!FileUtils::IsDirectory (import_dir))
+	    {
+		// error popup
+		Report::Error (_("The path to fingerprint files
+does not point to the valid directory."));
+		UI::SetFocus (`id (`import_dir));
+		continue;
+	    }
+	    if (use_pam &&
+		!Package::InstallAll (FingerprintReader::UpdatedArchPackages (
+		    FingerprintReader::required_packages))
+	    )
+	    {
+		use_pam     = false;
+		UI::ChangeWidget (`id (`rd), `Value, `pamno);
+		UI::ChangeWidget (`id (`import_dir), `Enabled, use_pam);
+		UI::ChangeWidget (`id (`browse), `Enabled, use_pam);
+		continue;
+	    }
+	    if (!use_pam &&
+		!Package::RemoveAll (FingerprintReader::UpdatedArchPackages (
+		    FingerprintReader::required_packages)))
+	    {
+		use_pam	= true;
+		UI::ChangeWidget (`id (`rd), `Value, `pamyes);
+		UI::ChangeWidget (`id (`import_dir), `Enabled, use_pam);
+		UI::ChangeWidget (`id (`browse), `Enabled, use_pam);
+		continue;
+	    }
+	    if (use_pam != FingerprintReader::use_pam ||
+		(use_pam && import_dir != ""))
+	    {
+		FingerprintReader::modified	= true;
+		FingerprintReader::use_pam	= use_pam;
+		FingerprintReader::import_dir	= import_dir;
+	    }
+            break;
+        }
+    }
+    return ret;
+}
+
+
+/* EOF */
+}
