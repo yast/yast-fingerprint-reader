@@ -102,7 +102,6 @@ public:
      */
     virtual YCPValue otherCommand(const YCPTerm& term);
 
-
     /**
      * array with pipe file descriptors
      */
@@ -112,6 +111,11 @@ public:
      * pid of the child process after fork
      */
     pid_t child_pid;
+
+    /**
+     * return value of the child process
+     */
+    int child_retval;
 
 };
 
