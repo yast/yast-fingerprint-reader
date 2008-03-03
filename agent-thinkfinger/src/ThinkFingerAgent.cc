@@ -38,6 +38,7 @@ static void callback (libthinkfinger_state state, void *data)
 ThinkFingerAgent::ThinkFingerAgent() : SCRAgent()
 {
     child_pid		= -1;
+    child_retval	= -1;
 }
 
 /**
@@ -156,7 +157,7 @@ YCPValue ThinkFingerAgent::Read(const YCPPath &path, const YCPValue& arg, const 
 	}
 	else if (PC(0) == "state") {
 	    YCPMap retmap;
-	    if (!child_pid)
+	    if (child_pid == -1)
 	    {
 		y2error ("ThinkFinger not initialized yet!");
 		return ret;
@@ -178,19 +179,49 @@ YCPValue ThinkFingerAgent::Read(const YCPPath &path, const YCPValue& arg, const 
 		}
 		retmap->add (YCPString ("state"), YCPInteger (state));
 	    }
+	    else if (retval == 0)
+	    {
+		// check if child is still alive
+		int status;
+		if (waitpid (-1, &status, WNOHANG) != 0)
+		{
+		    if (WIFSIGNALED (status))
+		    {
+			y2error ("child process was killed");
+			child_pid	= -1;
+			return ret;
+		    }
+		    if (WIFEXITED (status))
+		    {
+			child_retval	= WEXITSTATUS (status);
+			child_pid	= -1;
+			return ret;
+		    }
+		}
+	    }
 	    return retmap;
 	}
 	// wait for child exit
 	else if (PC(0) == "exit_status" ) {
 	    int status;
 	    int retval	= 255;
-	    wait (&status);
-	    if (WIFSIGNALED (status))
-		y2milestone ("child process was killed");
-	    else if (WIFEXITED (status))
+	    if (child_pid != -1)
 	    {
-		retval	= WEXITSTATUS (status);
-		y2milestone ("retval is %d", retval);
+		wait (&status);
+		if (WIFSIGNALED (status))
+		    y2milestone ("child process was killed");
+		else if (WIFEXITED (status))
+		{
+		    retval	= WEXITSTATUS (status);
+		    y2milestone ("retval is %d", retval);
+		}
+	    }
+	    else
+	    {
+		y2milestone ("child process already dead");
+		if (child_retval)
+		    retval	= child_retval;
+		child_retval	= -1;
 	    }
 	    ret = YCPInteger (retval);
 	    close (data_pipe[0]); // close FD for reading
@@ -237,6 +268,7 @@ YCPValue ThinkFingerAgent::Execute(const YCPPath &path, const YCPValue& val, con
 		    {
 			y2milestone ("... still alive, killing it", child_pid);
 			kill (child_pid, 9);
+			wait (&status);
 		    }
 		    child_pid	= -1;
 		}

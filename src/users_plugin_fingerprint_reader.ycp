@@ -170,7 +170,9 @@ are needed to save the new fingerprint.</p>");
 	    if (ui == `cancel || ui == `back)
 	    {
 		SCR::Execute (.thinkfinger.cancel);
-		y2milestone ("exit status after cancel: %1", SCR::Read (.thinkfinger.exit_status));
+		// status label (canceled after user action)
+		UI::ReplaceWidget (`id (`rp), `Label (_("Canceled")));
+		y2milestone ("canceled");
 		break;
 	    }
 	    sleep (100);

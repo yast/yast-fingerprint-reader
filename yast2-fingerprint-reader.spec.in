@@ -5,6 +5,8 @@ Requires:	yast2 yast2-pam
 BuildRequires:	libthinkfinger libusb-devel
 BuildRequires:	doxygen gcc-c++ yast2-core-devel perl-XML-Writer update-desktop-files yast2 yast2-devtools yast2-testsuite yast2-pam
 
+Supplements:    modalias(usb:v0483p2016d*dc*dsc*dp*ic*isc*ip*)
+
 Conflicts:	yast2-hardware-detection < 2.15.7
 
 Summary:	Configuration of fingerprint reader
