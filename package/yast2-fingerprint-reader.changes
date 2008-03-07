@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Mar  4 15:02:09 CET 2008 - jsuchome@suse.cz
+
+- wait for child exit with WNOHANG (bnc#361638)
+- 2.13.4
+
+-------------------------------------------------------------------
 Fri Feb 29 13:08:29 CET 2008 - jsuchome@suse.cz
 
 - fixed handling of child process exit (#361638)
