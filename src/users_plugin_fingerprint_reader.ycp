@@ -92,6 +92,30 @@ are needed to save the new fingerprint.</p>");
 	integer	swipe_success	= 0;
 	integer swipe_failed	= 0;
 
+	// helper function: return exit status of the thinkfinger proccess;
+	// regulary check user input for `cancel button
+	integer get_exit_status () {
+	    integer ex	= exit_status;
+	    while (true)
+	    {
+		boolean exited = (boolean) SCR::Read (.thinkfinger.check_exit);
+		if (exited)
+		{
+		    ex = (integer) SCR::Read (.thinkfinger.exit_status);
+		    break;
+		}
+		ui	= UI::PollInput ();
+		if (ui == `cancel)
+		{
+		    SCR::Execute (.thinkfinger.cancel);
+		    UI::ReplaceWidget (`id (`rp), `Label (_("Canceled")));
+		    break;
+		}
+		sleep (100);
+	    }
+	    return ex;
+	}
+
 	// helper function, form the string for UI from actuall data
 	void replace_swipe_string () {
 
@@ -156,12 +180,12 @@ are needed to save the new fingerprint.</p>");
 	    }
 	    else if (statemap == nil)
 	    {
-		exit_status = (integer) SCR::Read (.thinkfinger.exit_status);
+		exit_status	= get_exit_status ();
 		break;
 	    }
 	    if (exit)
 	    {
-		exit_status = (integer) SCR::Read (.thinkfinger.exit_status);
+		exit_status	= get_exit_status ();
 		break;//must be before check for cancel
 	    }
 

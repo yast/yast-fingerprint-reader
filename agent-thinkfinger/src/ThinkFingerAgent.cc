@@ -201,7 +201,34 @@ YCPValue ThinkFingerAgent::Read(const YCPPath &path, const YCPValue& arg, const 
 	    }
 	    return retmap;
 	}
-	// wait for child exit
+	// check if child process exited
+	else if (PC(0) == "check_exit" ) {
+	    int status;
+	    ret = YCPBoolean (false);
+	    if (child_pid != -1)
+	    {
+		if (waitpid (child_pid, &status, WNOHANG) != 0)
+		{
+		    child_pid	= -1;
+		    ret	= YCPBoolean (true);
+		    if (WIFSIGNALED (status))
+		    {
+			y2error ("child process was killed");
+		    }
+		    if (WIFEXITED (status))
+		    {
+			child_retval	= WEXITSTATUS (status);
+		    }
+		}
+	    }
+	    else
+	    {
+		y2milestone ("child process already exited");
+		ret	= YCPBoolean (true);
+	    }
+	}
+	// wait for child exit if it still not exited (do not use this part)
+	// return child exit value
 	else if (PC(0) == "exit_status" ) {
 	    int status;
 	    int retval	= 255;
@@ -218,7 +245,7 @@ YCPValue ThinkFingerAgent::Read(const YCPPath &path, const YCPValue& arg, const 
 	    }
 	    else
 	    {
-		y2milestone ("child process already dead");
+		y2milestone ("child process already exited");
 		if (child_retval)
 		    retval	= child_retval;
 		child_retval	= -1;

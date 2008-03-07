@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri Mar  7 15:16:53 CET 2008 - jsuchome@suse.cz
+
+- wait for child exit with WNOHANG (bnc#361638)
+- 2.16.4
+
+-------------------------------------------------------------------
 Mon Mar  3 16:42:27 CET 2008 - jsuchome@suse.cz
 
 - added modalias to Supplements, so package could get selected
