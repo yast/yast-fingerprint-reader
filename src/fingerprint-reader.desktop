@@ -22,3 +22,4 @@ Exec=/sbin/yast2 fingerprint-reader
 Name=Fingerprint Reader
 GenericName=Set up fingerprint authentication
 X-KDE-SubstituteUID=true
+StartupNotify=true
