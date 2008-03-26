@@ -80,7 +80,7 @@ are needed to save the new fingerprint.</p>");
 
 	// dialog caption
 	Wizard::SetContentsButtons(caption, contents, help_text,
-	    Label::BackButton(), Label::AcceptButton());
+	    Label::CancelButton(), Label::OKButton());
 
 	Wizard::HideAbortButton ();
 	Wizard::DisableNextButton ();
