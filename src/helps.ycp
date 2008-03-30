@@ -37,7 +37,7 @@ textdomain "fingerprint-reader";
 map HELPS = $[
 
     /* Read dialog help 1/2 */
-    "read" : _("<p><b><big>Initializing Fingerprint Reader Configuration</big></b><br>
+    "read" : _("<p><b>Initializing Fingerprint Reader Configuration</b><br>
 Please wait...<br></p>
 ") +
 
@@ -47,9 +47,8 @@ Safely abort the configuration utility by pressing <b>Abort</b> now.</p>
 "),
 
     /* Write dialog help 1/2 */
-    "write" : _("<p><b><big>Saving Fingerprint Reader Configuration</big></b><br>
-Please wait...<br></p>
-") +
+    "write" : _("<p><b>Saving Fingerprint Reader Configuration</b><br>
+Please wait...<br></p>\n") +
 
     /* Write dialog help 2/2 */
 _("<p><b><big>Aborting Saving:</big></b><br>

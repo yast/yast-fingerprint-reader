@@ -79,11 +79,12 @@ any FingerprintReaderDialog() {
     boolean use_pam	= FingerprintReader::use_pam;
     // help text
     string help_text = _("<p>
-<b><big>Fingerprint Authentication</big></b><br>
-The Fingerprint Reader Configuration updates your PAM settings to enable authentication with fingerprints.</p>") +
+<b>Fingerprint Authentication</b><br>
+The fingerprint reader configuration updates your PAM settings to enable authentication with fingerprints.</p>
+") +
 
     // help text, cont.
-    _("<p>To <b>import fingerprint files</b> from different installations, choose the directory where the files are located.</p>");
+    _("<p>To <b>Import Fingerprint Files</b> from different installations, choose the directory where the files are located.</p>");
 
     term con = `HBox (`HSpacing (3), `VBox (
 	// frame label

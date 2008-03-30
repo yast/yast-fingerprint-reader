@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Sun Mar 30 20:48:47 CEST 2008 - jsuchome@suse.cz
+
+- merged proofread texts 
+- 2.16.6
+
+-------------------------------------------------------------------
 Wed Mar 26 10:43:47 CET 2008 - jsuchome@suse.cz
 
 - use OK button label instead Accept (fate #120373)
