@@ -37,6 +37,7 @@ import "FingerprintReader";
 import "Label";
 import "Package";
 import "Popup";
+import "Report";
 import "Stage";
 import "Wizard";
 
@@ -84,7 +85,7 @@ The fingerprint reader configuration updates your PAM settings to enable authent
 ") +
 
     // help text, cont.
-    _("<p>To <b>Import Fingerprint Files</b> from different installations, choose the directory where the files are located.</p>");
+    sformat (_("<p>To <b>Import Fingerprint Files</b> from different installations, choose the directory where the original files are located. The files will be copied to %1 directory.</p>"), FingerprintReader::bir_dir);
 
     term con = `HBox (`HSpacing (3), `VBox (
 	// frame label
@@ -105,7 +106,8 @@ The fingerprint reader configuration updates your PAM settings to enable authent
 	`VSpacing (),
 	`HBox (
 	    // textentry label
-	    `TextEntry (`id(`import_dir),_("Directory with fingerprint files")),
+	    `TextEntry (`id(`import_dir),
+		_("Directory with fingerprint files for import")),
 	    `VBox (
 		`Label (""),
 		`PushButton (`id (`browse), Label::BrowseButton ())

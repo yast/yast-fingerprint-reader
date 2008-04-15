@@ -41,50 +41,90 @@ textdomain "fingerprint-reader";
 y2milestone ("----------------------------------------");
 y2milestone ("FingerprintReader module started");
 
-import "Progress";
-import "Report";
-import "Summary";
-
 import "CommandLine";
+import "FingerprintReader";
+
 include "fingerprint-reader/wizards.ycp";
 
+/**
+ * Enable the Fingerprint reader
+ * @param options  a list of parameters passed as args
+ * @return boolean true on success
+ */
+define boolean EnableHandler (map options) {
+
+    if (!FingerprintReader::use_pam)
+    {
+	FingerprintReader::use_pam	= false;
+	FingerprintReader::modified	= true;
+    }
+    return FingerprintReader::modified;
+}
+
+/**
+ * Disable the Fingerprint reader
+ * @param options  a list of parameters passed as args
+ * @return boolean true on success
+ */
+define boolean DisableHandler (map options) {
+    if (FingerprintReader::use_pam)
+    {
+	FingerprintReader::use_pam	= true;
+	FingerprintReader::modified	= true;
+    }
+    return FingerprintReader::modified;
+}
+
+/**
+ * Print summary of basic options
+ * @return boolean false
+ */
+define boolean SummaryHandler (map options ) {
+
+    CommandLine::Print (FingerprintReader::use_pam ?
+	// summary item
+	_("Use Fingerprint Authentication") :
+	// summary item
+	_("Do Not Use Fingerprint Authentication"));
+    return false; // do not call Write...
+}
+
 map cmdline_description = $[
-    "id" 	: "fingerprint-reader",
+    "id"	: "fingerprint-reader",
     /* Command line help text for the Xfingerprint-reader module */
     "help"	: _("Configuration of fingerprint-reader"),
     "guihandler"        : FingerprintReaderSequence,
     "initialize"        : FingerprintReader::Read,
     "finish"            : FingerprintReader::Write,
-    "actions"           : $[
-	// FIXME TODO: fill the functionality description here
+    "actions"		: $[
+	"enable" :$[
+	    "handler"	: EnableHandler,
+	    // command line help text for 'enable' action
+	    "help"	: _("Enable fingerprint authentication")
+	],
+	"disable" :$[
+	    "handler"	: DisableHandler,
+	    // command line help text for 'disable' action
+	    "help"	: _("Disable fingerprint authentication")
+	],
+	"summary" :$[
+	    "handler"	: SummaryHandler,
+	    // command line help text for 'summary' action
+	    "help"	: _("Configuration summary")
+	],
     ],
     "options"		: $[
-	// FIXME TODO: fill the option descriptions here
     ],
     "mappings"		: $[
-	// FIXME TODO: fill the mappings of actions and options here
-    ]
+	"enable"	: [],
+	"disable"	: [],
+	"summary"	: [],
+    ],
 ];
 
-/* is this proposal or not? */
-boolean propose = false;
-list args = WFM::Args();
-if(size(args) > 0) {
-    if(is(WFM::Args(0), path) && WFM::Args(0) == .propose) {
-        y2milestone("Using PROPOSE mode");
-        propose = true;
-    }
-}
+any ret = CommandLine::Run(cmdline_description);
 
-/* main ui function */
-any ret = nil;
-
-if(propose) ret = FingerprintReaderAutoSequence();
-else ret = CommandLine::Run(cmdline_description);
-y2debug("ret=%1", ret);
-
-/* Finish */
-y2milestone("FingerprintReader module finished");
+y2milestone("FingerprintReader module finished with %1", ret);
 y2milestone("----------------------------------------");
 
 return ret;

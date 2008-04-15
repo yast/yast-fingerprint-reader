@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Tue Apr 15 11:06:53 CEST 2008 - jsuchome@suse.cz
+
+- added support for command line interface
+- better help text and 'import directory' label
+- 2.16.7
+
+-------------------------------------------------------------------
 Sun Mar 30 20:48:47 CEST 2008 - jsuchome@suse.cz
 
 - merged proofread texts 

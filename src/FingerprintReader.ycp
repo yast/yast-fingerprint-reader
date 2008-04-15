@@ -82,7 +82,7 @@ global string import_dir	= "";
 /**
  * Directory for storing fingerprint files
  */
-string bir_dir	= "/etc/pam_thinkfinger";
+global string bir_dir	= "/etc/pam_thinkfinger";
 
 /**
  * Get the list of fingerprint readers
@@ -220,7 +220,7 @@ global map Export () {
 global list Summary() {
 
     // summary header
-    string summary = Summary::AddHeader(summary, _("PAM Login"));
+    string summary = Summary::AddHeader ("", _("PAM Login"));
 
     summary = Summary::AddLine (summary, (use_pam) ?
 	// summary item
