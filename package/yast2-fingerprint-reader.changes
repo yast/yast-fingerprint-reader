@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue May 20 09:11:29 CEST 2008 - jsuchome@suse.cz
+
+- do not enable configuration when pam_mount is set up (bnc#390810)
+- 2.16.8 
+
+-------------------------------------------------------------------
 Fri May 16 16:40:22 CEST 2008 - jsrain@suse.cz
 
 - added categories Settings and System into desktop file

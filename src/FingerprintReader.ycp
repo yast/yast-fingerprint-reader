@@ -96,6 +96,30 @@ global list ReadFingerprintReaderDevices () {
 }
 
 /**
+ * If pam_mount is enabled, pam_thinkfinger cannot be used (bnc#390810)
+ */
+global boolean CryptedHomesEnabled () {
+
+    boolean enabled	= false;
+    foreach (string service, ["gdm", "login", "kdm", "xdm", "sudo" ], {
+	map out = (map)SCR::Execute (.target.bash_output, sformat (
+	    "pam-config --service %1 -q --mount", service));
+	if (out["exit"]:1 == 0)
+	{
+	    list ll = filter (string l, splitstring(out["stdout"]:"", "\n"), {
+		return (l != "");
+	    });
+	    if (size (ll) > 0)
+	    {
+		enabled	= true;
+		break;
+	    }
+	}
+    });
+    return enabled;
+}
+
+/**
  * Read all fingerprint-reader settings
  * @return true on success
  */
@@ -109,7 +133,12 @@ global boolean Read() {
 	Report::Error (_("Fingerprint reader device is not available on this system."));
 	return false;
     }
-
+    if (CryptedHomesEnabled ())
+    {
+	// error popup (pam_thinkfinger cannot work with pam_mount)
+	Report::Error (_("Fingerprint reader device cannot be used when encrypted directories are used."));
+	return false;
+    }
     use_pam	= Pam::Enabled ("thinkfinger");
 
     modified = false;
