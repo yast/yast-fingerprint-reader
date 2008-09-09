@@ -85,7 +85,7 @@ The fingerprint reader configuration updates your PAM settings to enable authent
 ") +
 
     // help text, cont.
-    sformat (_("<p>To <b>Import Fingerprint Files</b> from different installations, choose the directory where the original files are located. The files will be copied to %1 directory.</p>"), FingerprintReader::bir_dir);
+    sformat (_("<p>To <b>Import Fingerprint Files</b> from different installations, choose the directory where the original files are located. The files will be copied to directory %1.</p>"), FingerprintReader::bir_dir);
 
     term con = `HBox (`HSpacing (3), `VBox (
 	// frame label

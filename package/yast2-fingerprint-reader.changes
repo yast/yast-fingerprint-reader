@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Sep  9 11:13:45 CEST 2008 - jsuchome@suse.cz
+
+- merged proofread texts 
+- 2.17.0 
+
+-------------------------------------------------------------------
 Tue May 20 09:11:29 CEST 2008 - jsuchome@suse.cz
 
 - do not enable configuration when pam_mount is set up (bnc#390810)

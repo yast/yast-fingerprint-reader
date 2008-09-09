@@ -136,7 +136,7 @@ global boolean Read() {
     if (CryptedHomesEnabled ())
     {
 	// error popup (pam_thinkfinger cannot work with pam_mount)
-	Report::Error (_("Fingerprint reader device cannot be used when encrypted directories are used."));
+	Report::Error (_("Fingerprint reader devices cannot be used when encrypted directories are used."));
 	return false;
     }
     use_pam	= Pam::Enabled ("thinkfinger");
