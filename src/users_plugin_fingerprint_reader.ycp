@@ -135,7 +135,6 @@ are needed to save the new fingerprint.</p>");
 	while (ui != `cancel)
 	{
 	    map statemap	= (map) SCR::Read (.fprint.state);
-y2internal ("statemap: %1", statemap);
 	    if (statemap != nil && statemap != $[])
 	    {
 		integer state	= statemap["state"]:0;

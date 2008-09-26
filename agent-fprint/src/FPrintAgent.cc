@@ -50,13 +50,6 @@ void FPrintAPI::catch_sigterm (int sig_num)
 // de-initialize finger print reader (must be called at the end!)
 void FPrintAPI::finalize ()
 {
-/*
-    if (instance().tf != NULL)
-    {
-	libfprint_free (instance().tf);
-	instance().tf	= NULL;
-    }
-*/
     y2internal ("finalize");
     if (instance().data != NULL)
     {
@@ -84,7 +77,6 @@ FPrintAPI::~FPrintAPI ()
  */
 int FPrintAPI::acquire (int write_fd, string bir_path)
 {
-y2internal ("FPrintAPI::acquire");
     signal (15, catch_sigterm);
 
 // FIXME move initialization to separate call, to differentiate betw.ret values
@@ -103,7 +95,6 @@ y2internal ("FPrintAPI::acquire");
 		write (write_fd, &r, sizeof(int));
 		return r;
 	}
-y2internal ("fp_init: %d", r);
 	discovered_devs = fp_discover_devs();
 	if (!discovered_devs) {
 		y2error("Could not discover devices\n");
@@ -112,7 +103,6 @@ y2internal ("fp_init: %d", r);
 		write (write_fd, &r, sizeof(int));
 		return r;
 	}
-y2internal ("discovered");
 
 	ddev = discovered_devs[0];
 
@@ -149,9 +139,9 @@ y2internal ("discovered");
 
 	if (r < 0) {
 	    y2error ("Enroll failed with error %d", r);
-	    break;
+//	    break; FIXME what now?
 	}
-y2internal ("retvall: %d", r);
+y2internal ("retval: %d", r);
 	if (write (write_fd, &r, sizeof (int)) == -1)
 	    y2error ("write to pipe failed: %d (%m)", errno);
 
@@ -410,7 +400,6 @@ YCPValue FPrintAgent::Execute(const YCPPath &path, const YCPValue& val, const YC
 	    }
 	    else if (child_pid == 0)
 	    {
-y2internal ("child process");
 		close (data_pipe[0]); // close the read-only FD
 		int state =
 		    FPrintAPI::instance().acquire (data_pipe[1], path);
