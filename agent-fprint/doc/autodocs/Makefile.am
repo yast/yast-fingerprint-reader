@@ -1,5 +1,5 @@
 #
-# Makefile.am for .../agent-thinkfinger/doc/autodocs
+# Makefile.am for .../agent-fprint/doc/autodocs
 #
 
 htmldir = $(docdir)/autodocs

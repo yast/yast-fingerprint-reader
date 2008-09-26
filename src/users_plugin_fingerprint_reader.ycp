@@ -92,22 +92,22 @@ are needed to save the new fingerprint.</p>");
 	integer	swipe_success	= 0;
 	integer swipe_failed	= 0;
 
-	// helper function: return exit status of the thinkfinger proccess;
+	// helper function: return exit status of the fprint proccess;
 	// regulary check user input for `cancel button
 	integer get_exit_status () {
 	    integer ex	= exit_status;
 	    while (true)
 	    {
-		boolean exited = (boolean) SCR::Read (.thinkfinger.check_exit);
+		boolean exited = (boolean) SCR::Read (.fprint.check_exit);
 		if (exited)
 		{
-		    ex = (integer) SCR::Read (.thinkfinger.exit_status);
+		    ex = (integer) SCR::Read (.fprint.exit_status);
 		    break;
 		}
 		ui	= UI::PollInput ();
 		if (ui == `cancel)
 		{
-		    SCR::Execute (.thinkfinger.cancel);
+		    SCR::Execute (.fprint.cancel);
 		    UI::ReplaceWidget (`id (`rp), `Label (_("Canceled")));
 		    break;
 		}
@@ -125,7 +125,7 @@ are needed to save the new fingerprint.</p>");
 		swipe_success, swipe_failed)
 	    ));
 	}
-	if (SCR::Execute (.thinkfinger.add-user, bir_path) != true)
+	if (SCR::Execute (.fprint.enroll, bir_path) != true)
 	{
 	    ui = `cancel;
 	    // status message
@@ -134,7 +134,8 @@ are needed to save the new fingerprint.</p>");
 	}
 	while (ui != `cancel)
 	{
-	    map statemap	= (map) SCR::Read (.thinkfinger.state);
+	    map statemap	= (map) SCR::Read (.fprint.state);
+y2internal ("statemap: %1", statemap);
 	    if (statemap != nil && statemap != $[])
 	    {
 		integer state	= statemap["state"]:0;
@@ -176,6 +177,21 @@ are needed to save the new fingerprint.</p>");
 			replace_swipe_string ();
 			break;
 		    }
+
+		    case 1: { // FP_ENROLL_COMPLETE
+			UI::ReplaceWidget (`id (`rp),
+			    // status label
+			    `Label (_("Storing data...")));
+			UI::ReplaceWidget (`id (`rpstatus), `VSpacing ());
+			exit = true;
+			break;
+		    }
+		    case -1: { // FP_ENROLL_FAIL FIXME
+			UI::ReplaceWidget (`id (`rp),
+			    `Label (_("Acquiring fingerprint failed.")));
+			exit = true;
+			break;
+		    }
 		}
 	    }
 	    else if (statemap == nil)
@@ -193,7 +209,7 @@ are needed to save the new fingerprint.</p>");
 
 	    if (ui == `cancel || ui == `back)
 	    {
-		SCR::Execute (.thinkfinger.cancel);
+		SCR::Execute (.fprint.cancel);
 		// status label (canceled after user action)
 		UI::ReplaceWidget (`id (`rp), `Label (_("Canceled")));
 		y2milestone ("canceled");
@@ -202,9 +218,11 @@ are needed to save the new fingerprint.</p>");
 	    sleep (100);
 	}
 	y2milestone ("agent exit status: %1", exit_status);
+// FIXME FIXME
 	// 9 is failed acquire, 253 is USB error, 254 communication error
 	// FIXME what's the meaning of TF_STATE_ENROLL_SUCCESS (7)?
-	if (exit_status == 7 || exit_status == 8)
+//	if (exit_status == 7 || exit_status == 8)
+	if (exit_status == 1)
 	{
 	    // status label
 	    UI::ReplaceWidget (`id (`rp), `Label (_("Fingerprint acquired successfully.")));

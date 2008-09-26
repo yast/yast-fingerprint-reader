@@ -1,21 +1,22 @@
-/* ThinkFingerAgent.h
+/* FPrintAgent.h
  *
- * ThinkFinger agent implementation
+ * FPrint agent implementation
  *
  * Authors: Jiri Suchomel <jsuchome@suse.cz>
  *
- * $Id: ThinkFingerAgent.h 26456 2005-12-07 16:11:23Z jsuchome $
+ * $Id: FPrintAgent.h 26456 2005-12-07 16:11:23Z jsuchome $
  */
 
-#ifndef _ThinkFingerAgent_h
-#define _ThinkFingerAgent_h
+#ifndef _FPrintAgent_h
+#define _FPrintAgent_h
 
 #include <Y2.h>
 #include <scr/SCRAgent.h>
 
 using namespace std;
 
-#include <libthinkfinger.h>
+#include <libfprint/fprint.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -23,20 +24,20 @@ using namespace std;
 #include <string>
 
 /**
- * The real interface to thinkfinger library
+ * The real interface to fprint library
  * - extra (singleton) class is used to contain signal handler function
  */
-class ThinkFingerAPI
+class FPrintAPI
 {
 
 private:
-    ThinkFingerAPI ();
+    FPrintAPI ();
 	        
-    virtual ~ThinkFingerAPI();
+    virtual ~FPrintAPI();
 
 public:
 
-    static ThinkFingerAPI & instance();
+    static FPrintAPI & instance();
 
     static void catch_sigterm (int);
 
@@ -44,16 +45,16 @@ public:
 
     int test_int;
 
-    libthinkfinger *tf;
+    struct fp_print_data *data;
 
     void finalize ();
 
 };
 
 /**
- * @short An interface class between YaST2 and ThinkFinger Agent
+ * @short An interface class between YaST2 and FPrint Agent
  */
-class ThinkFingerAgent : public SCRAgent
+class FPrintAgent : public SCRAgent
 {
 
 public:
@@ -61,13 +62,13 @@ public:
     /**
      * Default constructor.
      */
-    ThinkFingerAgent ();
+    FPrintAgent ();
 	        
 
     /**
      * Destructor.
      */
-    virtual ~ThinkFingerAgent();
+    virtual ~FPrintAgent();
 
     /**
      * Provides SCR Read ().
@@ -119,4 +120,4 @@ public:
 
 };
 
-#endif /* _ThinkFingerAgent_h */
+#endif /* _FPrintAgent_h */

@@ -2,7 +2,7 @@
 
 @HEADER@
 Requires:	yast2 yast2-pam
-BuildRequires:	libthinkfinger libusb-devel
+BuildRequires:	libfprint0 libfprint-devel libusb-devel
 BuildRequires:	doxygen gcc-c++ yast2-core-devel perl-XML-Writer update-desktop-files yast2 yast2-devtools yast2-testsuite yast2-pam
 
 Supplements:    modalias(usb:v0483p2016d*dc*dsc*dp*ic*isc*ip*)
@@ -32,5 +32,5 @@ Summary:	Configuration of fingerprint reader
 @moduledir@/UsersPluginFingerprintReader.pm
 @desktopdir@/fingerprint-reader.desktop
 @scrconfdir@/*.scr
-@plugindir@/libpy2ag_thinkfinger.*
+@plugindir@/libpy2ag_fprint.*
 %doc @docdir@

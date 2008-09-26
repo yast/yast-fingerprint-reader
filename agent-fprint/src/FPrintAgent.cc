@@ -1,13 +1,13 @@
-/* ThinkFingerAgent.cc
+/* FPrintAgent.cc
  *
- * An agent for ThinkFinger library (access to fingerprint reader)
+ * An agent for FPrint library (access to fingerprint reader)
  *
  * Authors: Jiri Suchomel <jsuchome@suse.cz>
  *
  * $Id$
  */
 
-#include "ThinkFingerAgent.h"
+#include "FPrintAgent.h"
 
 #define PC(n)       (path->component_str(n))
 
@@ -15,27 +15,11 @@
 #define SET_FILE_FAILED		600
 #define SET_CALLBACK_FAILED	700
 
-// structure to be passed to callback
-typedef struct {
-    int write_fd;
-} s_tfdata;
-
-/**
- * callback function to be called from libthinkfinger_acquire
- * @param state current device status
- * @param data void pointer to user data
- */
-static void callback (libthinkfinger_state state, void *data)
-{
-    s_tfdata *tfdata = (s_tfdata *) data;
-    if (write (tfdata->write_fd, &state, sizeof (libthinkfinger_state)) == -1)
-	y2error("write to pipe failed: %d (%m)", errno);
-}
 
 /**
  * Constructor
  */
-ThinkFingerAgent::ThinkFingerAgent() : SCRAgent()
+FPrintAgent::FPrintAgent() : SCRAgent()
 {
     child_pid		= -1;
     child_retval	= -1;
@@ -44,95 +28,178 @@ ThinkFingerAgent::ThinkFingerAgent() : SCRAgent()
 /**
  * Destructor
  */
-ThinkFingerAgent::~ThinkFingerAgent()
+FPrintAgent::~FPrintAgent()
 {
 }
 
 // return the only instance of the class
-ThinkFingerAPI& ThinkFingerAPI::instance()
+FPrintAPI& FPrintAPI::instance()
 {
-    static ThinkFingerAPI _instance; // The singleton
+    static FPrintAPI _instance; // The singleton
     return _instance;
 }
 
 // handler for SIGTERM signal (it is necessary to kill the process when
 // user his Cancel)
-void ThinkFingerAPI::catch_sigterm (int sig_num)
+void FPrintAPI::catch_sigterm (int sig_num)
 {
     instance().finalize ();
     exit (256);
 }
 
 // de-initialize finger print reader (must be called at the end!)
-void ThinkFingerAPI::finalize ()
+void FPrintAPI::finalize ()
 {
+/*
     if (instance().tf != NULL)
     {
-	libthinkfinger_free (instance().tf);
+	libfprint_free (instance().tf);
 	instance().tf	= NULL;
     }
+*/
+    y2internal ("finalize");
+    if (instance().data != NULL)
+    {
+	fp_print_data_free (instance().data);
+	instance().data	= NULL;
+    }
+    fp_exit();
+    y2internal ("finalized");
 }
 
-ThinkFingerAPI::ThinkFingerAPI()
+FPrintAPI::FPrintAPI()
 {
-    tf			= NULL;
+    data	= NULL;
 }
 
-ThinkFingerAPI::~ThinkFingerAPI ()
+FPrintAPI::~FPrintAPI ()
 {
 }
 
 /**
- * wrapper for libthinkfinger_acquire function;
+ * wrapper for fp_enroll_finger function;
  * - we need to take care of the errors and signals
- * @param file descriptor of the pipe
- * @param path to the target bir file
+ * @param file descriptor of the pipe  
+ * @param path to the target bir file FIXME
  */
-int ThinkFingerAPI::acquire (int write_fd, string bir_path)
+int FPrintAPI::acquire (int write_fd, string bir_path)
 {
+y2internal ("FPrintAPI::acquire");
     signal (15, catch_sigterm);
 
-    int retval	= 255;
-    s_tfdata tfdata;
-    tfdata.write_fd		= write_fd;
+// FIXME move initialization to separate call, to differentiate betw.ret values
+    
+    struct fp_print_data *enrolled_print = NULL;
+    int r;
 
-    libthinkfinger_init_status init_status;
-    instance().tf = libthinkfinger_new (&init_status);
-    if (init_status != TF_INIT_SUCCESS) {
-	y2error ("libthinkfinger_new failed");
-	instance().finalize ();
-	retval	= INIT_FAILED;
-	write (write_fd, &retval, sizeof(libthinkfinger_state));
-	return retval;
+	struct fp_dscv_dev *ddev;
+	struct fp_dscv_dev **discovered_devs;
+	struct fp_dev *dev;
+
+	r = fp_init();
+	if (r < 0) {
+		y2error("Failed to initialize libfprint\n");
+		r	= INIT_FAILED;
+		write (write_fd, &r, sizeof(int));
+		return r;
+	}
+y2internal ("fp_init: %d", r);
+	discovered_devs = fp_discover_devs();
+	if (!discovered_devs) {
+		y2error("Could not discover devices\n");
+		instance().finalize ();
+		r	= INIT_FAILED;
+		write (write_fd, &r, sizeof(int));
+		return r;
+	}
+y2internal ("discovered");
+
+	ddev = discovered_devs[0];
+
+
+	if (!ddev) {
+		y2error("No devices detected.\n");
+		instance().finalize ();
+		r	= INIT_FAILED;
+		write (write_fd, &r, sizeof(int));
+		return r;
+	}
+	
+	struct fp_driver *drv;
+	drv = fp_dscv_dev_get_driver(ddev);
+	y2milestone ("Found device claimed by %s driver",
+	    fp_driver_get_full_name(drv));
+
+	dev = fp_dev_open(ddev);
+	fp_dscv_devs_free(discovered_devs);
+	if (!dev) {
+		y2error("Could not open device.\n");
+	}
+
+    y2milestone("Opened device. It's now time to enroll your finger.\n\n");
+
+    y2milestone ("You will need to successfully scan your finger %d times to "
+	"complete the process.\n", fp_dev_get_nr_enroll_stages (dev));
+
+    do {
+	sleep (1);
+	y2internal ("Scan your finger now.");
+
+	r = fp_enroll_finger (dev, &enrolled_print);
+
+	if (r < 0) {
+	    y2error ("Enroll failed with error %d", r);
+	    break;
+	}
+y2internal ("retvall: %d", r);
+	if (write (write_fd, &r, sizeof (int)) == -1)
+	    y2error ("write to pipe failed: %d (%m)", errno);
+
+
+	switch (r) {
+		case FP_ENROLL_COMPLETE:
+			y2milestone("Enroll complete!");
+			break;
+		case FP_ENROLL_FAIL:
+			y2milestone("Enroll failed, something wen't wrong :(");
+//			return NULL; FIXME
+			break;
+		case FP_ENROLL_PASS:
+			y2milestone("Enroll stage passed. Yay!");
+			break;
+		case FP_ENROLL_RETRY:
+			y2milestone("Didn't quite catch that. Please try again.");
+			break;
+		case FP_ENROLL_RETRY_TOO_SHORT:
+			y2milestone("Your swipe was too short, please try again.");
+			break;
+		case FP_ENROLL_RETRY_CENTER_FINGER:
+			y2milestone("Didn't catch that, please center your finger on the sensor and try again.");
+			break;
+		case FP_ENROLL_RETRY_REMOVE_FINGER:
+			y2milestone("Scan failed, please remove your finger and then try again.");
+			break;
+	}
+    } while (r != FP_ENROLL_COMPLETE);
+
+    if (!enrolled_print) {
+	y2error ("Enroll complete but no print?\n");
+    }
+    else {
+	data	= enrolled_print;
+	y2milestone ("Enrollment completed, exiting with %d", r);
+	// FIXME save enrolled_print now
     }
 
-    if (libthinkfinger_set_file (instance().tf, bir_path.c_str ()) < 0)
-    {
-	y2error ("libthinkfinger_set_file failed");
-	instance().finalize ();
-	retval	= SET_FILE_FAILED;
-	write (write_fd, &retval, sizeof(libthinkfinger_state));
-	return retval;		
-    }
-    if (libthinkfinger_set_callback (instance().tf, callback, &tfdata) < 0)
-    {
-	y2error ("libthinkfinger_set_callback failed");
-	instance().finalize ();
-	retval	= SET_CALLBACK_FAILED;
-	write (write_fd, &retval, sizeof(libthinkfinger_state));
-	return retval;		
-    }
-    retval = libthinkfinger_acquire (ThinkFingerAPI::instance().tf);
-    y2milestone ("acquire done with state %d", retval);
     instance().finalize ();
     signal (15, SIG_DFL);
-    return retval;
+    return r;
 }
 
 /**
  * Dir
  */
-YCPList ThinkFingerAgent::Dir(const YCPPath& path) 
+YCPList FPrintAgent::Dir(const YCPPath& path) 
 {   
     y2error("Wrong path '%s' in Dir().", path->toString().c_str());
     return YCPNull();
@@ -141,7 +208,7 @@ YCPList ThinkFingerAgent::Dir(const YCPPath& path)
 /**
  * Read
  */
-YCPValue ThinkFingerAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPValue& opt) {
+YCPValue FPrintAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPValue& opt) {
 
     y2debug ("Path in Read(): %s", path->toString().c_str());
     YCPValue ret = YCPVoid(); 
@@ -159,11 +226,11 @@ YCPValue ThinkFingerAgent::Read(const YCPPath &path, const YCPValue& arg, const 
 	    YCPMap retmap;
 	    if (child_pid == -1)
 	    {
-		y2error ("ThinkFinger not initialized yet!");
+		y2error ("FPrint not initialized yet!");
 		return ret;
 	    }
 	    int state;
-	    size_t size	= sizeof (libthinkfinger_state);
+	    size_t size	= sizeof (int);
 	    int retval = read (data_pipe[0], &state, size);
 	    if (retval == -1)
 	    {
@@ -267,16 +334,16 @@ YCPValue ThinkFingerAgent::Read(const YCPPath &path, const YCPValue& arg, const 
 /**
  * Write - nothing to do
  */
-YCPBoolean ThinkFingerAgent::Write(const YCPPath &path, const YCPValue& value,
+YCPBoolean FPrintAgent::Write(const YCPPath &path, const YCPValue& value,
 	                             const YCPValue& arg)
 {
     return YCPBoolean(false);
 }
 
 /**
- * Execute(.thinkfinger.add-user) is action to acquire fingerprint
+ * Execute(.fprint.enroll) is action to acquire fingerprint
  */
-YCPValue ThinkFingerAgent::Execute(const YCPPath &path, const YCPValue& val, const YCPValue& arg)
+YCPValue FPrintAgent::Execute(const YCPPath &path, const YCPValue& val, const YCPValue& arg)
 {
     y2milestone ("Path in Execute(): %s", path->toString().c_str());
     YCPValue ret = YCPBoolean(false);
@@ -293,7 +360,7 @@ YCPValue ThinkFingerAgent::Execute(const YCPPath &path, const YCPValue& val, con
 		    int status;
 		    if (waitpid (-1, &status, WNOHANG) == 0)
 		    {
-			y2milestone ("... still alive, killing it", child_pid);
+			y2milestone ("... still alive, killing it");
 			kill (child_pid, 9);
 			wait (&status);
 		    }
@@ -310,7 +377,7 @@ YCPValue ThinkFingerAgent::Execute(const YCPPath &path, const YCPValue& val, con
 	 * parameter is whole path to target bir file, e.g.
 	 * /tmp/YaST-123-456/hh.bir
 	 */
-	else if (PC(0) == "add-user") {
+	else if (PC(0) == "enroll") {
 	    string path;
 	    if (!val.isNull())
 	    {
@@ -343,9 +410,10 @@ YCPValue ThinkFingerAgent::Execute(const YCPPath &path, const YCPValue& val, con
 	    }
 	    else if (child_pid == 0)
 	    {
+y2internal ("child process");
 		close (data_pipe[0]); // close the read-only FD
 		int state =
-		    ThinkFingerAPI::instance().acquire (data_pipe[1], path);
+		    FPrintAPI::instance().acquire (data_pipe[1], path);
 		y2milestone ("acquire done with state %d", state);
 		close (data_pipe[1]);
 		exit (state);
@@ -363,11 +431,11 @@ YCPValue ThinkFingerAgent::Execute(const YCPPath &path, const YCPValue& val, con
 /**
  * otherCommand
  */
-YCPValue ThinkFingerAgent::otherCommand(const YCPTerm& term)
+YCPValue FPrintAgent::otherCommand(const YCPTerm& term)
 {
     string sym = term->name();
 
-    if (sym == "ThinkFingerAgent") {
+    if (sym == "FPrintAgent") {
         
         return YCPVoid();
     }
