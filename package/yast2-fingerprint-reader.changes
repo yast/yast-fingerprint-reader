@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri Sep 26 16:17:48 CEST 2008 - jsuchome@suse.cz
+
+- initial version of agent based on linfprint library (fate#300416)
+- 2.17.1 
+
+-------------------------------------------------------------------
 Tue Sep  9 11:13:45 CEST 2008 - jsuchome@suse.cz
 
 - merged proofread texts 
