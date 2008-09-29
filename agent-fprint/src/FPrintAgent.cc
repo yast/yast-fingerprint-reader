@@ -135,11 +135,16 @@ int FPrintAPI::acquire (int write_fd, string bir_path)
 	sleep (1);
 	y2internal ("Scan your finger now.");
 
+	// FIXME not possible, this is total number of stages
+	y2milestone ("remaining stages: %d", fp_dev_get_nr_enroll_stages(dev));
+
 	r = fp_enroll_finger (dev, &enrolled_print);
 
 	if (r < 0) {
 	    y2error ("Enroll failed with error %d", r);
-//	    break; FIXME what now?
+	    instance().finalize ();
+	    signal (15, SIG_DFL);
+	    return r;
 	}
 y2internal ("retval: %d", r);
 	if (write (write_fd, &r, sizeof (int)) == -1)
@@ -152,8 +157,9 @@ y2internal ("retval: %d", r);
 			break;
 		case FP_ENROLL_FAIL:
 			y2milestone("Enroll failed, something wen't wrong :(");
-//			return NULL; FIXME
-			break;
+			instance().finalize ();
+			signal (15, SIG_DFL);
+			return r;
 		case FP_ENROLL_PASS:
 			y2milestone("Enroll stage passed. Yay!");
 			break;
