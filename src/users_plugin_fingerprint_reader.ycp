@@ -117,6 +117,7 @@ are needed to save the new fingerprint.</p>");
 	}
 
 	// helper function, form the string for UI from actuall data
+	// FIXME we don't know number of remaining swipes...
 	void replace_swipe_string () {
 
 	    UI::ReplaceWidget (`id (`rpstatus), `Label (
@@ -125,6 +126,14 @@ are needed to save the new fingerprint.</p>");
 		swipe_success, swipe_failed)
 	    ));
 	}
+
+
+	void status_message (string label, string message) {
+	    UI::ReplaceWidget (`id (`rp), `Label (label));
+	    UI::ReplaceWidget (`id (`rpstatus), `Label (message));
+	}
+
+
 	if (SCR::Execute (.fprint.enroll, bir_path) != true)
 	{
 	    ui = `cancel;
@@ -132,13 +141,16 @@ are needed to save the new fingerprint.</p>");
 	    UI::ReplaceWidget (`id (`rp),
 		`Label (_("Initialization of fingerprint reader failed.")));
 	}
+// FIXME show generic message... the user can enroll finger
 	while (ui != `cancel)
 	{
 	    map statemap	= (map) SCR::Read (.fprint.state);
 	    if (statemap != nil && statemap != $[])
 	    {
 		integer state	= statemap["state"]:0;
+y2security ("state: %1", state);
 		switch (state) {
+		    /*
 		    case 8: { // TF_STATE_ACQUIRE_SUCCESS
 			UI::ReplaceWidget (`id (`rp),
 			    // status label
@@ -176,7 +188,7 @@ are needed to save the new fingerprint.</p>");
 			replace_swipe_string ();
 			break;
 		    }
-
+		    */
 		    case 1: { // FP_ENROLL_COMPLETE
 			UI::ReplaceWidget (`id (`rp),
 			    // status label
@@ -185,12 +197,69 @@ are needed to save the new fingerprint.</p>");
 			exit = true;
 			break;
 		    }
-		    case -1: { // FP_ENROLL_FAIL FIXME
-			UI::ReplaceWidget (`id (`rp),
-			    `Label (_("Acquiring fingerprint failed.")));
+		    case 2: { // FP_ENROLL_FAILED ?? FIXME
+			status_message (
+			    // status label
+			    _("Scan failed."),
+			    // status message
+			    _("Swipe finger again."));
+			break;
+		    }
+		    case 3: { // FP_ENROLL_PASS
+			swipe_success	= swipe_success + 1;
+//			replace_swipe_string ();
+
+			status_message (
+			    // status label
+			    _("Enroll stage passed."),
+			    // status message
+			    _("Swipe finger again."));
+			break;
+		    }
+		    case 101: { // FP_ENROLL_RETRY_TOO_SHORT:
+
+			status_message (
+			    // status label
+			    _("Scan failed."),
+			    // status message
+			    _("Swipe was too short, try again."));
+			break;
+		    }
+		    case 102: { // FP_ENROLL_RETRY_CENTER_FINGER:
+
+			status_message (
+			    // status label
+			    _("Scan failed."),
+			    // status message
+			    _("Center your finger on the sensor and try again."));
+			break;
+		    }
+		    case 103: { // FP_ENROLL_RETRY_REMOVE_FINGER:
+
+			// status message
+			status_message (
+			    // status label
+			    _("Scan failed."),
+			    // status message
+			    _("Remove your finger and try again."));
+			break;
+		    }
+		    case -1: { // FP_ENROLL_FAIL
+			// some fatal error
+			status_message (
+			    // status label
+			    _("Acquiring fingerprint failed."), "");
 			exit = true;
 			break;
 		    }
+		}
+		if (state < -1)
+		{
+		    // some fatal error
+		    status_message (
+			// status label
+			_("Acquiring fingerprint failed."), "");
+		    exit = true;
 		}
 	    }
 	    else if (statemap == nil)
@@ -217,10 +286,6 @@ are needed to save the new fingerprint.</p>");
 	    sleep (100);
 	}
 	y2milestone ("agent exit status: %1", exit_status);
-// FIXME FIXME
-	// 9 is failed acquire, 253 is USB error, 254 communication error
-	// FIXME what's the meaning of TF_STATE_ENROLL_SUCCESS (7)?
-//	if (exit_status == 7 || exit_status == 8)
 	if (exit_status == 1)
 	{
 	    // status label
@@ -253,6 +318,7 @@ are needed to save the new fingerprint.</p>");
 	ret	= UI::UserInput ();
 	if (ret == `next)
 	{
+	    // FIXME no bir file can be defined yet FIXME
 	    // modified data to add to user
 	    map<string, any> tmp_data	= $[
 		"bir_file"		: username,
