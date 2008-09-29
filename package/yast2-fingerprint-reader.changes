@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Sep 29 15:51:23 CEST 2008 - jsuchome@suse.cz
+
+- check the values returned by agent (fp_enroll_finger_img) in YCP
+- 2.17.2
+
+-------------------------------------------------------------------
 Fri Sep 26 16:17:48 CEST 2008 - jsuchome@suse.cz
 
 - initial version of agent based on linfprint library (fate#300416)
