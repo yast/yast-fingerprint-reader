@@ -60,7 +60,7 @@ are needed to save the new fingerprint.</p>");
 	    y2error ("user name is empty!");
 	    return `back;
 	}
-	string bir_path	= Directory::tmpdir + "/" + username + ".bir";
+	string fingerprint_dir	= Directory::tmpdir + "/" + username + "/";
 
 	term contents = `HBox (`HSpacing (1.5), `VBox(
 	    `VSpacing(0.5),
@@ -117,7 +117,6 @@ are needed to save the new fingerprint.</p>");
 	}
 
 	// helper function, form the string for UI from actuall data
-	// FIXME we don't know number of remaining swipes...
 	void replace_swipe_string () {
 
 	    UI::ReplaceWidget (`id (`rpstatus), `Label (
@@ -134,61 +133,28 @@ are needed to save the new fingerprint.</p>");
 	}
 
 
-	if (SCR::Execute (.fprint.enroll, bir_path) != true)
+	if (SCR::Execute (.fprint.enroll, fingerprint_dir) != true)
 	{
 	    ui = `cancel;
 	    // status message
 	    UI::ReplaceWidget (`id (`rp),
 		`Label (_("Initialization of fingerprint reader failed.")));
 	}
-// FIXME show generic message... the user can enroll finger
+	else
+	    status_message (
+		// status label
+		_("Device initialized."),
+		// status message
+		_("Swipe your right index finger."));
+
 	while (ui != `cancel)
 	{
 	    map statemap	= (map) SCR::Read (.fprint.state);
 	    if (statemap != nil && statemap != $[])
 	    {
 		integer state	= statemap["state"]:0;
-y2security ("state: %1", state);
+		y2milestone ("state: %1", state);
 		switch (state) {
-		    /*
-		    case 8: { // TF_STATE_ACQUIRE_SUCCESS
-			UI::ReplaceWidget (`id (`rp),
-			    // status label
-			    `Label (_("Storing data...")));
-			UI::ReplaceWidget (`id (`rpstatus), `VSpacing ());
-			exit = true;
-			break;
-		    }
-		    case 7: { // TF_STATE_ENROLL_SUCCESS
-			UI::ReplaceWidget (`id (`rp),
-			    // status label
-			    `Label (_("Storing data...")));
-			UI::ReplaceWidget (`id (`rpstatus), `VSpacing ());
-			exit = true;
-			break;
-		    }
-		    case 9: { // TF_STATE_ACQUIRE_FAILED
-			UI::ReplaceWidget (`id (`rp),
-			    `Label (_("Acquiring fingerprint failed.")));
-			exit = true;
-			break;
-		    }
-		    case 2: { // TF_STATE_SWIPE_0
-			UI::ReplaceWidget (`id (`rp),
-			    `Label (_("Please swipe your finger...")));
-			break;
-		    }
-		    case 5: { // TF_STATE_SWIPE_SUCCESS
-			swipe_success	= swipe_success + 1;
-			replace_swipe_string ();
-			break;
-		    }
-		    case 6: { // TF_STATE_SWIPE_AFILED
-			swipe_failed	= swipe_failed + 1;
-			replace_swipe_string ();
-			break;
-		    }
-		    */
 		    case 1: { // FP_ENROLL_COMPLETE
 			UI::ReplaceWidget (`id (`rp),
 			    // status label
@@ -197,7 +163,7 @@ y2security ("state: %1", state);
 			exit = true;
 			break;
 		    }
-		    case 2: { // FP_ENROLL_FAILED ?? FIXME
+		    case 2: { // FP_ENROLL_FAILED
 			status_message (
 			    // status label
 			    _("Scan failed."),
@@ -207,7 +173,7 @@ y2security ("state: %1", state);
 		    }
 		    case 3: { // FP_ENROLL_PASS
 			swipe_success	= swipe_success + 1;
-//			replace_swipe_string ();
+//			replace_swipe_string (); FIXME
 
 			status_message (
 			    // status label
@@ -300,7 +266,17 @@ y2security ("state: %1", state);
 	    // error message, part 1
 	    string error	= _("Could not acquire fingerprint.");
 	    string details	= "";
-	    if (exit_status == 253)
+	    // see the error exit values in FPrintAgent.cc
+	    if (exit_status == 200)
+		// error message, part 2
+		details	= _("Initialization failed.");
+	    else if (exit_status == 201)
+		// error message, part 2
+		details	= _("No devices detected.");
+	    else if (exit_status == 202)
+		// error message, part 2
+		details	= _("Device could not be opened.");
+	    else if (exit_status == 253)
 		// error message, part 2
 		details	= _("USB error occured.");
 	    else if (exit_status == 254)
@@ -308,9 +284,7 @@ y2security ("state: %1", state);
 		details = _("Communication with fingerprint reader failed.");
 	    if (exit_status != 256)
 	    {
-		UI::ReplaceWidget (`id (`rp), `Label (error));
-		if (details != "")
-		    UI::ReplaceWidget (`id (`rpstatus), `Label (details));
+		status_message (error, details);
 	    }
 	    Wizard::EnableBackButton ();
 	}
@@ -318,10 +292,9 @@ y2security ("state: %1", state);
 	ret	= UI::UserInput ();
 	if (ret == `next)
 	{
-	    // FIXME no bir file can be defined yet FIXME
 	    // modified data to add to user
 	    map<string, any> tmp_data	= $[
-		"bir_file"		: username,
+		"_fingerprint_dir"	: fingerprint_dir, // FIXME save correctly
 		"plugin_modified"	: 1
 	    ];
 	    if (data["what"]:"" == "edit_user")
