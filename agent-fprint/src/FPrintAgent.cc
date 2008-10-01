@@ -11,9 +11,11 @@
 
 #define PC(n)       (path->component_str(n))
 
-#define INIT_FAILED		500
-#define SET_FILE_FAILED		600
-#define SET_CALLBACK_FAILED	700
+// error exit values of the child process
+#define INIT_FAILED		200
+#define NO_DEVICES		201
+#define DEVICE_OPEN_FAILED	202
+#define ENROLL_FAILURE		255
 
 
 /**
@@ -71,63 +73,70 @@ FPrintAPI::~FPrintAPI ()
  * wrapper for fp_enroll_finger function;
  * - we need to take care of the errors and signals
  * @param file descriptor of the pipe  
- * @param path to the target bir file FIXME
+ * @param path to the temporary directory for storing fingerprints
  */
-int FPrintAPI::acquire (int write_fd, string bir_path)
+int FPrintAPI::acquire (int write_fd, string dir_path)
 {
+    // catch the abort signal to make proper cleanup
     signal (15, catch_sigterm);
 
-// FIXME move initialization to separate call, to differentiate betw.ret values
-    
     struct fp_print_data *enrolled_print = NULL;
     int r;
 
-	struct fp_dscv_dev *ddev;
-	struct fp_dscv_dev **discovered_devs;
-	struct fp_dev *dev;
+    struct fp_dscv_dev *ddev;
+    struct fp_dscv_dev **discovered_devs;
+    struct fp_dev *dev;
 
-	r = fp_init();
-	if (r < 0) {
-		y2error("Failed to initialize libfprint\n");
-		r	= INIT_FAILED;
-		write (write_fd, &r, sizeof(int));
-		return r;
-	}
-	discovered_devs = fp_discover_devs();
-	if (!discovered_devs) {
-		y2error("Could not discover devices\n");
-		instance().finalize ();
-		r	= INIT_FAILED;
-		write (write_fd, &r, sizeof(int));
-		return r;
-	}
+    r = fp_init();
+    if (r < 0) {
+	y2error("Failed to initialize libfprint");
+	r	= INIT_FAILED;
+	write (write_fd, &r, sizeof(int));
+	return r;
+    }
+    
+    discovered_devs = fp_discover_devs();
+    if (!discovered_devs) {
+	y2error("Could not discover devices");
+	instance().finalize ();
+	r	= NO_DEVICES;
+	write (write_fd, &r, sizeof(int));
+	return r;
+    }
 
-	ddev = discovered_devs[0];
+    ddev = discovered_devs[0];
 
-
-	if (!ddev) {
-		y2error("No devices detected.\n");
-		instance().finalize ();
-		r	= INIT_FAILED;
-		write (write_fd, &r, sizeof(int));
-		return r;
-	}
+    if (!ddev) {
+	y2error("No devices detected.");
+	instance().finalize ();
+	r	= NO_DEVICES;
+	write (write_fd, &r, sizeof(int));
+	return r;
+    }
 	
+	/*
 	struct fp_driver *drv;
 	drv = fp_dscv_dev_get_driver(ddev);
 	y2milestone ("Found device claimed by %s driver",
 	    fp_driver_get_full_name(drv));
+	*/
 
-	dev = fp_dev_open(ddev);
-	fp_dscv_devs_free(discovered_devs);
-	if (!dev) {
-		y2error("Could not open device.\n");
-	}
+    dev = fp_dev_open(ddev);
+    fp_dscv_devs_free(discovered_devs);
+    if (!dev) {
+	y2error("Could not open device.");
+	instance().finalize ();
+	r	= DEVICE_OPEN_FAILED;
+	write (write_fd, &r, sizeof(int));
+	return r;
+    }
 
-    y2milestone("Opened device. It's now time to enroll your finger.\n\n");
+    y2milestone ("Device opened successfully.");
 
+    /* TODO how to pass the info about stages number to the parent?
     y2milestone ("You will need to successfully scan your finger %d times to "
-	"complete the process.\n", fp_dev_get_nr_enroll_stages (dev));
+	"complete the process.", fp_dev_get_nr_enroll_stages (dev));
+    */ 
 
     do {
 	sleep (1);
@@ -140,7 +149,7 @@ int FPrintAPI::acquire (int write_fd, string bir_path)
 	    y2error ("Enroll failed with error %d", r);
 	    instance().finalize ();
 	    signal (15, SIG_DFL);
-	    return r;
+	    return ENROLL_FAILURE;
 	}
 
 	if (write (write_fd, &r, sizeof (int)) == -1)
@@ -155,7 +164,7 @@ int FPrintAPI::acquire (int write_fd, string bir_path)
 			y2milestone("Enroll failed, something wen't wrong :(");
 			instance().finalize ();
 			signal (15, SIG_DFL);
-			return r;
+			return ENROLL_FAILURE;
 		case FP_ENROLL_PASS:
 			y2milestone("Enroll stage passed. Yay!");
 			break;
@@ -175,12 +184,20 @@ int FPrintAPI::acquire (int write_fd, string bir_path)
     } while (r != FP_ENROLL_COMPLETE);
 
     if (!enrolled_print) {
-	y2error ("Enroll complete but no print?\n");
+	y2error ("Enroll complete but print is null");
+	r	= ENROLL_FAILURE;
     }
     else {
+	// set the HOME to temporary path we know from argument
+	setenv ("HOME", dir_path.c_str(), 1);
 	data	= enrolled_print;
+	int save_r = fp_print_data_save (data, RIGHT_INDEX);
+	if (save_r < 0)
+	{
+	    y2error ("Data save failed with %d", r);
+	    r	= save_r;
+	}
 	y2milestone ("Enrollment completed, exiting with %d", r);
-	// FIXME save enrolled_print now
     }
 
     instance().finalize ();
@@ -231,7 +248,7 @@ YCPValue FPrintAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPVa
 	    }
 	    else if (retval == size) {
 		if (state == INIT_FAILED ||
-		    state == SET_FILE_FAILED || state == SET_CALLBACK_FAILED)
+		    state == NO_DEVICES || state == DEVICE_OPEN_FAILED)
 		{
 		    y2warning ("some initialization failed (%d)...", state);
 		    return ret;
@@ -377,7 +394,7 @@ YCPValue FPrintAgent::Execute(const YCPPath &path, const YCPValue& val, const YC
 	    }
 	    else
 	    {
-		y2error ("path to bir file is missing");
+		y2error ("path to tmp directory is missing");
 		return ret;
 	    }
 	    if (pipe (data_pipe) == -1) {
