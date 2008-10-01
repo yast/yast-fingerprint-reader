@@ -44,20 +44,18 @@ FPrintAPI& FPrintAPI::instance()
 void FPrintAPI::catch_sigterm (int sig_num)
 {
     instance().finalize ();
-    exit (256);
+    _exit (256);
 }
 
 // de-initialize finger print reader (must be called at the end!)
 void FPrintAPI::finalize ()
 {
-    y2internal ("finalize");
     if (instance().data != NULL)
     {
 	fp_print_data_free (instance().data);
 	instance().data	= NULL;
     }
     fp_exit();
-    y2internal ("finalized");
 }
 
 FPrintAPI::FPrintAPI()
@@ -133,12 +131,10 @@ int FPrintAPI::acquire (int write_fd, string bir_path)
 
     do {
 	sleep (1);
-	y2internal ("Scan your finger now.");
-
-	// FIXME not possible, this is total number of stages
-	y2milestone ("remaining stages: %d", fp_dev_get_nr_enroll_stages(dev));
 
 	r = fp_enroll_finger (dev, &enrolled_print);
+
+	y2debug ("retval: %d", r);
 
 	if (r < 0) {
 	    y2error ("Enroll failed with error %d", r);
@@ -146,7 +142,7 @@ int FPrintAPI::acquire (int write_fd, string bir_path)
 	    signal (15, SIG_DFL);
 	    return r;
 	}
-y2internal ("retval: %d", r);
+
 	if (write (write_fd, &r, sizeof (int)) == -1)
 	    y2error ("write to pipe failed: %d (%m)", errno);
 
@@ -411,7 +407,7 @@ YCPValue FPrintAgent::Execute(const YCPPath &path, const YCPValue& val, const YC
 		    FPrintAPI::instance().acquire (data_pipe[1], path);
 		y2milestone ("acquire done with state %d", state);
 		close (data_pipe[1]);
-		exit (state);
+		_exit (state);
 	    }
 	    else // parent -> return
 	    {
