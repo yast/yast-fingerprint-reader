@@ -2,6 +2,7 @@
 Wed Oct  1 11:53:49 CEST 2008 - jsuchome@suse.cz
 
 - call _exit() to exit the child process, not exit() (bnc#430229)
+- 2.17.3
 
 -------------------------------------------------------------------
 Mon Sep 29 15:51:23 CEST 2008 - jsuchome@suse.cz
