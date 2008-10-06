@@ -1,4 +1,14 @@
 -------------------------------------------------------------------
+Mon Oct  6 16:05:44 CEST 2008 - jsuchome@suse.de
+
+- removed Supplements from spec file (package will be recommended
+  by pam_fp)
+- pam_fp used instead of pam_thinkfinger
+- save fingerprints in user's home directory
+- disabled option to import fingerprints
+- 2.17.4 
+
+-------------------------------------------------------------------
 Wed Oct  1 11:53:49 CEST 2008 - jsuchome@suse.cz
 
 - call _exit() to exit the child process, not exit() (bnc#430229)

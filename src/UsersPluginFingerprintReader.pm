@@ -24,7 +24,6 @@ YaST::YCP::Import ("FileUtils");
 YaST::YCP::Import ("FingerprintReader");
 YaST::YCP::Import ("Pam");
 YaST::YCP::Import ("SCR");
-YaST::YCP::Import ("Users");
 
 ##--------------------------------------
 ##--------------------- global variables
@@ -33,9 +32,6 @@ YaST::YCP::Import ("Users");
 my $error	= "";
 
 my $fingerprint_reader_available = undef;
-
-# path to store fingerprints
-my $bir_path	= "/etc/pam_thinkfinger";
 
 my $name	= "UsersPluginFingerprintReader";
    
@@ -65,7 +61,8 @@ sub contains {
 # helper, check if Fingerprint Reader was already configured
 sub fingerprint_reader_configured {
 
-    return Pam->Enabled ("thinkfinger");
+#    return Pam->Enabled ("fp");
+    return 1;
 }
 
 # helper function: check if Fingerprint Reader (the device) is available
@@ -81,37 +78,38 @@ sub is_fingerprint_reader_available {
 # check if given user has fingerprint authentication configured
 sub fingerprint_present {
 
-    my ($data) = @_;
-    my $username	= $data->{"uid"};
-    return 0 if !$username;
-    my $org_username	= $data->{"org_user"}{"uid"} || $username;
-    my $org_bir_file	= "$bir_path/$org_username.bir";
-    return (FileUtils->Exists ($org_bir_file));
+    my ($data)	= @_;
+    my $home	= $data->{"homeDirectory"};
+    return 0 if !$home;
+    my $org_home= $data->{"org_user"}{"homeDirectory"} || $home;
+    return (FileUtils->IsDirectory ("$org_home/.fprint/prints"));
 }
 
-# check if bir file name corresponds with username
+# check if fingerprint directory corresponds with username
 sub adapt_fingerprint_info {
 
     my ($config, $data) = @_;
     my $username	= $data->{"uid"};
-    my $org_username	= $data->{"org_user"}{"uid"} || $username;
-    my $bir_file	= $data->{"bir_file"};
-    return $data if !defined $username;
-    if (!defined $bir_file && $username ne $org_username) {
-	# When user was only renamed, but new fingerprint was not generated,
-	# there's no 'bir_file' entry in the map ->
-	# backup his original bir file to tmpdir so it won't get lost and can
-	# be correctly renamed in Write.
-	my $org_bir_file	= "$bir_path/$org_username.bir";
-	if (FileUtils->Exists ($org_bir_file)) {
-	    my $tmpdir	= Directory->tmpdir ();
-	    SCR->Execute (".target.bash", "/bin/cp $org_bir_file $tmpdir/$username.bir");
-	    $data->{"bir_file"}	= $username;
-	}
+
+    my $fingerprint_dir	= $data->{"_fingerprint_dir"};
+
+    # if _fingerprint_dir is not defined, plugin UI wasn't called (yet) 
+    # and we don't need to solve user renaming, as the files will be moved
+    # together with a home directory
+
+    # but we need to move temporary directory if it exists and user was renamed:
+    if ($fingerprint_dir && $fingerprint_dir ne $username) {
+	my $tmp_dir	= Directory->tmpdir ();
+	my $new_dir	= "$tmp_dir/$username";
+	# there might be some directory related to deleted user - remove it:
+	SCR->Execute (".target.bash", "/bin/rm -rf $new_dir");
+	# move the current tmp directory
+	SCR->Execute (".target.bash",
+	    "/bin/mv $tmp_dir/$fingerprint_dir $new_dir");
+	# reflect the renaming in the data hash
+	$data->{"_fingerprint_dir"}	= $username;
     }
-    if ($bir_file && $bir_file ne $username) {
-	$data->{"bir_file"}	= $username;
-    }
+
     return $data;
 }
 
@@ -119,7 +117,7 @@ sub adapt_fingerprint_info {
 sub remove_plugin_data {
 
     my ($config, $data)		= @_;
-    $data->{"bir_file"}		= "";
+    $data->{"_fingerprint_dir"}	= "";
     $data->{"plugin_modified"}	= 1;
     return $data;
 }
@@ -307,48 +305,38 @@ sub Edit {
 
 
 # What should be done after user is finally written (this is called only once):
-# - remove org_username.bir file,
-#  but only when there is no other (new) user of that name
-# - move temporary bir file to correct location
+# - move temporary directory with fingerprints to correct location ($HOME)
 BEGIN { $TYPEINFO{Write} = ["function", "boolean", "any", "any"];}
 sub Write {
 
     my ($self, $config, $data)  = @_;
 
     my $username	= $data->{"uid"};
-    my $org_username	= $data->{"org_user"}{"uid"} || $username;
-    my $bir_file	= $data->{"bir_file"};
-    my $org_bir_file	= "$bir_path/$org_username.bir";
+    my $fingerprint_dir	= $data->{"_fingerprint_dir"};
 
-    if (($config->{"modified"} || "") eq "deleted") {
-	# check if some new user doesn't have the name of the deleted one
-	my $u	= Users->GetUserByName ($org_username, "");
-	if (!defined $u->{"bir_file"}) {
-	    $bir_file	= "";
+    return YaST::YCP::Boolean (0) if (!$username);
+
+    if ($fingerprint_dir) {
+	my $tmp_dir	= Directory->tmpdir ();
+	$fingerprint_dir= "$tmp_dir/$fingerprint_dir/.fprint";
+	my $home	= $data->{"homeDirectory"};
+	if (!$home) {
+	    y2warning ("home directory empty or not defined");
+	    return YaST::YCP::Boolean (0);
 	}
-    }
-    return if (!$username || ! defined $bir_file);
-    if ($username ne $org_username) {
-	# check if there was old bir-file
-	my $u	= Users->GetUserByName ($org_username, "");
-	# do not delete birfile when some new user was added with the name
-	# of this one's original name
-	if (!defined $u->{"bir_file"} && FileUtils->Exists ($org_bir_file)) {
-	    y2milestone ("removing old file $org_bir_file owned by $username");
-	    SCR->Execute (".target.bash", "/bin/rm $org_bir_file");
+	my $uid		= $data->{"uidNumber"};
+	my $gid		= $data->{"gidNumber"};
+
+	my $command = "/bin/chown -R $uid:$gid $fingerprint_dir";
+	my %out     = %{SCR->Execute (".target.bash_output", $command)};
+	if (($out{"stderr"} || "") ne "") {
+	    y2error ("error calling $command: ", $out{"stderr"} || "");
+	    return YaST::YCP::Boolean (0);
 	}
-    }
-    elsif ($bir_file eq "" && FileUtils->Exists ($org_bir_file)) {
-	# disable fingerprint authentication for this user
-	# (now $org_username is same as $username)
-	y2milestone ("removing file $org_bir_file for user $username");
-	SCR->Execute (".target.bash", "/bin/rm $org_bir_file");
-    }
-    if ($bir_file) {
-	my $bir_file_path	= Directory->tmpdir ();
-        $bir_file_path	= "$bir_file_path/$bir_file.bir";
-        y2milestone ("moving $bir_file_path to $bir_path/");
-	SCR->Execute (".target.bash", "/bin/mv $bir_file_path $bir_path/");
+	else {
+	    y2milestone ("moving $fingerprint_dir to $home/");
+	    SCR->Execute (".target.bash","/bin/cp -ar $fingerprint_dir $home/");
+	}
     }
     return YaST::YCP::Boolean (1);
 }

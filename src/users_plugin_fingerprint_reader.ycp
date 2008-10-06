@@ -116,17 +116,6 @@ are needed to save the new fingerprint.</p>");
 	    return ex;
 	}
 
-	// helper function, form the string for UI from actuall data
-	void replace_swipe_string () {
-
-	    UI::ReplaceWidget (`id (`rpstatus), `Label (
-		// status message (%1, %2 are numbers)
-		sformat (_("Successful swipes: %1, failed swipes: %2"),
-		swipe_success, swipe_failed)
-	    ));
-	}
-
-
 	void status_message (string label, string message) {
 	    UI::ReplaceWidget (`id (`rp), `Label (label));
 	    UI::ReplaceWidget (`id (`rpstatus), `Label (message));
@@ -173,8 +162,6 @@ are needed to save the new fingerprint.</p>");
 		    }
 		    case 3: { // FP_ENROLL_PASS
 			swipe_success	= swipe_success + 1;
-//			replace_swipe_string (); FIXME
-
 			status_message (
 			    // status label
 			    _("Enroll stage passed."),
@@ -294,7 +281,8 @@ are needed to save the new fingerprint.</p>");
 	{
 	    // modified data to add to user
 	    map<string, any> tmp_data	= $[
-		"_fingerprint_dir"	: fingerprint_dir, // FIXME save correctly
+		// this is identifying the subdirectory of common tmp directory:
+		"_fingerprint_dir"	: username,
 		"plugin_modified"	: 1
 	    ];
 	    if (data["what"]:"" == "edit_user")

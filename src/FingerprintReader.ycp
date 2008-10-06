@@ -51,15 +51,15 @@ global boolean modified = false;
 /**
  * Required packages for this module to operate
  */
-global list<string> required_packages = ["pam_thinkfinger"];
+global list<string> required_packages = ["pam_fp"];
 
 // packages to install for specific architectures (see e.g. #224510)
 global map arch_packages	= $[
-    "pam_thinkfinger"	: $[
-        "ia64"		: [ "pam_thinkfinger-x86" ],
-        "ppc64"		: [ "pam_thinkfinger-64bit" ],
-        "s390_64"	: [ "pam_thinkfinger-32bit" ],
-        "x86_64"	: [ "pam_thinkfinger-32bit" ],
+    "pam_fp"	: $[
+        "ia64"		: [ "pam_fp-x86" ],
+        "ppc64"		: [ "pam_fp-64bit" ],
+        "s390_64"	: [ "pam_fp-32bit" ],
+        "x86_64"	: [ "pam_fp-32bit" ],
     ],
 ];
 
@@ -80,11 +80,6 @@ global boolean use_pam	= false;
 global string import_dir	= "";
 
 /**
- * Directory for storing fingerprint files
- */
-global string bir_dir	= "/etc/pam_thinkfinger";
-
-/**
  * Get the list of fingerprint readers
  */
 global list ReadFingerprintReaderDevices () {
@@ -96,7 +91,7 @@ global list ReadFingerprintReaderDevices () {
 }
 
 /**
- * If pam_mount is enabled, pam_thinkfinger cannot be used (bnc#390810)
+ * If pam_mount is enabled, pam_fp cannot be used (bnc#390810)
  */
 global boolean CryptedHomesEnabled () {
 
@@ -135,11 +130,11 @@ global boolean Read() {
     }
     if (CryptedHomesEnabled ())
     {
-	// error popup (pam_thinkfinger cannot work with pam_mount)
+	// error popup (pam_fp cannot work with pam_mount)
 	Report::Error (_("Fingerprint reader devices cannot be used when encrypted directories are used."));
 	return false;
     }
-    use_pam	= Pam::Enabled ("thinkfinger");
+    use_pam	= Pam::Enabled ("fp");
 
     modified = false;
     return true;
@@ -180,7 +175,7 @@ global boolean Write() {
     Progress::NextStage();
 
     boolean pam_ret	= use_pam ?
-	Pam::Add ("thinkfinger") : Pam::Remove ("thinkfinger");
+	Pam::Add ("fp") : Pam::Remove ("fp");
     if (!pam_ret)
 	// Error message
 	Report::Error (_("Cannot write PAM settings."));
@@ -188,6 +183,7 @@ global boolean Write() {
     sleep(sl);
 
     Progress::NextStage();
+    /* FIXME import into users homes?
     if (use_pam && import_dir != "")
     {
 	if (!FileUtils::Exists (bir_dir))
@@ -210,6 +206,7 @@ global boolean Write() {
 	    }
 	}
     }
+    */
 
     Progress::NextStage();
     sleep(sl);
