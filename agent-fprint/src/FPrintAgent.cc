@@ -158,27 +158,22 @@ int FPrintAPI::acquire (int write_fd, string dir_path)
 
 	switch (r) {
 		case FP_ENROLL_COMPLETE:
-			y2milestone("Enroll complete!");
+			y2milestone ("Enroll complete!");
 			break;
 		case FP_ENROLL_FAIL:
-			y2milestone("Enroll failed, something wen't wrong :(");
+			y2error ("Enroll failed, something wen't wrong :(");
 			instance().finalize ();
 			signal (15, SIG_DFL);
 			return ENROLL_FAILURE;
 		case FP_ENROLL_PASS:
-			y2milestone("Enroll stage passed. Yay!");
 			break;
 		case FP_ENROLL_RETRY:
-			y2milestone("Didn't quite catch that. Please try again.");
 			break;
 		case FP_ENROLL_RETRY_TOO_SHORT:
-			y2milestone("Your swipe was too short, please try again.");
 			break;
 		case FP_ENROLL_RETRY_CENTER_FINGER:
-			y2milestone("Didn't catch that, please center your finger on the sensor and try again.");
 			break;
 		case FP_ENROLL_RETRY_REMOVE_FINGER:
-			y2milestone("Scan failed, please remove your finger and then try again.");
 			break;
 	}
     } while (r != FP_ENROLL_COMPLETE);
