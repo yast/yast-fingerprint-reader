@@ -70,6 +70,7 @@ are needed to save the new fingerprint.</p>");
 	    ),
 	    `ReplacePoint (`id (`rpstatus), `VSpacing ()),
 	    `PushButton (`id (`cancel), Label::CancelButton ()),
+	    `ReplacePoint (`id (`rpswipes), `VSpacing ()),
 	    `VSpacing (0.5)
 	    ),
 	    `HSpacing (1.5)
@@ -116,11 +117,11 @@ are needed to save the new fingerprint.</p>");
 	    return ex;
 	}
 
+	// update the status about fingerprint reader
 	void status_message (string label, string message) {
 	    UI::ReplaceWidget (`id (`rp), `Label (label));
 	    UI::ReplaceWidget (`id (`rpstatus), `Label (message));
 	}
-
 
 	if (SCR::Execute (.fprint.enroll, fingerprint_dir) != true)
 	{
@@ -167,6 +168,10 @@ are needed to save the new fingerprint.</p>");
 			    _("Enroll stage passed."),
 			    // status message
 			    _("Swipe finger again."));
+	                UI::ReplaceWidget (`id (`rpswipes), `Label (
+			    // status message (%1 is number)
+			    sformat (_("Successful swipes: %1"), swipe_success)
+			));
 			break;
 		    }
 		    case 101: { // FP_ENROLL_RETRY_TOO_SHORT:
@@ -194,7 +199,7 @@ are needed to save the new fingerprint.</p>");
 			    // status label
 			    _("Scan failed."),
 			    // status message
-			    _("Remove your finger and try again."));
+			    _("Remove your finger from the sensor and try again."));
 			break;
 		    }
 		    case -1: { // FP_ENROLL_FAIL
@@ -238,6 +243,7 @@ are needed to save the new fingerprint.</p>");
 	    }
 	    sleep (100);
 	}
+	UI::ReplaceWidget (`id (`rpswipes), `VSpacing ());
 	y2milestone ("agent exit status: %1", exit_status);
 	if (exit_status == 1)
 	{

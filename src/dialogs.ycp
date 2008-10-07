@@ -82,12 +82,10 @@ any FingerprintReaderDialog() {
     string help_text = _("<p>
 <b>Fingerprint Authentication</b><br>
 The fingerprint reader configuration updates your PAM settings to enable authentication with fingerprints.</p>
-");
+")
 
-    /*
     // help text, cont.
-    sformat (_("<p>To <b>Import Fingerprint Files</b> from different installations, choose the directory where the original files are located. The files will be copied to directory %1.</p>"), FingerprintReader::bir_dir);
-    */
+    + _("<p>To configure user fingerprints, start YaST User Management and see the Plug-Ins tab of selected user. When <b>Start User Management after finish</b> is checked, it will be opened automatically after the device configuration is done.</p>");
 
     term con = `HBox (`HSpacing (3), `VBox (
 	// frame label
@@ -105,18 +103,11 @@ The fingerprint reader configuration updates your PAM settings to enable authent
 	    ),
 	    `VSpacing (0.5)
 	), `HSpacing (0.5))),
-	`VSpacing ()
-	/* FIXME: no import?
-	`HBox (
-	    // textentry label
-	    `TextEntry (`id(`import_dir),
-		_("Directory with fingerprint files for import")),
-	    `VBox (
-		`Label (""),
-		`PushButton (`id (`browse), Label::BrowseButton ())
-	    )
+	`VSpacing (),
+	`Left (
+	    // button label
+	    `CheckBox (`id (`users), _("&Start User Management after finish"))
 	)
-	*/
     ), `HSpacing(3));
 
     Wizard::SetContentsButtons (caption, con, help_text,
@@ -127,51 +118,27 @@ The fingerprint reader configuration updates your PAM settings to enable authent
     if (!Stage::cont ())
 	Wizard::HideAbortButton ();
 
-//    UI::ChangeWidget (`id (`import_dir), `Enabled, use_pam);
-//    UI::ChangeWidget (`id (`browse), `Enabled, use_pam);
+    UI::ChangeWidget (`id (`users), `Enabled, use_pam);
 
     any ret = nil;
     while (true) {
 
 	ret = UI::UserInput();
-//	string import_dir = (string)UI::QueryWidget (`id (`import_dir), `Value);
 
         if (ret == `pamyes || ret == `pamno)
 	{
             use_pam = (ret == `pamyes);
-	    /*
-	    UI::ChangeWidget (`id (`import_dir), `Enabled, use_pam);
-	    UI::ChangeWidget (`id (`browse), `Enabled, use_pam);
-	    */
+	    UI::ChangeWidget (`id (`users), `Enabled, use_pam);
 	}
 
 	if (ret == `abort || ret == `cancel || ret == `back) {
 	    if(ReallyAbort()) break;
 	    else continue;
 	}
-	/*
-	else if (ret == `browse) {
-	    string dir = UI::AskForExistingDirectory (import_dir, "");
-	    if (dir != nil)
-	    {
-		if ((findlastof (dir, "/") + 1) == size(dir))
-		    dir = substring (dir, 0, size(dir)-1);
-		UI::ChangeWidget (`id(`import_dir), `Value, dir);
-	    }
+	else if (ret == `users) {
+	    // temporary enable pam module
 	}
-	*/
         else if (ret == `next) {
-	    /*
-	    if (use_pam && import_dir != "" &&
-		!FileUtils::IsDirectory (import_dir))
-	    {
-		// error popup
-		Report::Error (_("The path to fingerprint files
-does not point to the valid directory."));
-		UI::SetFocus (`id (`import_dir));
-		continue;
-	    }
-	    */
 	    if (use_pam &&
 		!Package::InstallAll (FingerprintReader::UpdatedArchPackages (
 		    FingerprintReader::required_packages))
@@ -179,18 +146,16 @@ does not point to the valid directory."));
 	    {
 		use_pam     = false;
 		UI::ChangeWidget (`id (`rd), `Value, `pamno);
-		/*
-		UI::ChangeWidget (`id (`import_dir), `Enabled, use_pam);
-		UI::ChangeWidget (`id (`browse), `Enabled, use_pam);
-		*/
+		UI::ChangeWidget (`id (`users), `Enabled, false);
 		continue;
 	    }
 	    if (use_pam != FingerprintReader::use_pam)
 	    {
 		FingerprintReader::modified	= true;
 		FingerprintReader::use_pam	= use_pam;
-//		FingerprintReader::import_dir	= import_dir;
 	    }
+	    if (use_pam && UI::QueryWidget (`id (`users), `Value) == true)
+		FingerprintReader::run_users	= true;
             break;
         }
     }

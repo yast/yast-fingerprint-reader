@@ -127,6 +127,13 @@ any ret = CommandLine::Run(cmdline_description);
 y2milestone("FingerprintReader module finished with %1", ret);
 y2milestone("----------------------------------------");
 
+if (FingerprintReader::run_users)
+{
+    y2milestone ("users should be called after FingerprintReader");
+    ret	= WFM::CallFunction ("users", WFM::Args ());
+    y2milestone ("Users module returned %1", ret);
+}
+
 return ret;
 
 /* EOF */

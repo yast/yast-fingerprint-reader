@@ -48,6 +48,9 @@ import "Summary";
  */
 global boolean modified = false;
 
+// if yast2-users should be called after fingerprint is set up
+
+global boolean run_users	= false;
 /**
  * Required packages for this module to operate
  */
