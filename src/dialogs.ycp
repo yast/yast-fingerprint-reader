@@ -85,7 +85,7 @@ The fingerprint reader configuration updates your PAM settings to enable authent
 ")
 
     // help text, cont.
-    + _("<p>To configure user fingerprints, start YaST User Management and see the Plug-Ins tab of selected user. When <b>Start User Management after finish</b> is checked, it will be opened automatically after the device configuration is done.</p>");
+    + _("<p>To register fingerprints for a user, start YaST User Management and see the Plug-Ins tab of the selected user. To automatically start YaST User Management, activate <b>Start User Management After Finish</b>.</p>");
 
     term con = `HBox (`HSpacing (3), `VBox (
 	// frame label
