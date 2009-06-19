@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Fri Jun 19 12:37:32 CEST 2009 - mvidner@suse.cz
+
+- Using autodocs-cc.ami, which contains a fix for automake 1.11.
+
+-------------------------------------------------------------------
 Mon Oct 13 08:24:26 CEST 2008 - jsuchome@suse.cz
 
 - better help text
