@@ -7,7 +7,7 @@ BuildRequires:	doxygen gcc-c++ yast2-core-devel perl-XML-Writer update-desktop-f
 
 Conflicts:	yast2-hardware-detection < 2.15.7
 
-Summary:	Configuration of fingerprint reader
+Summary:	YaST2 - Fingerprint Reader Configuration
 
 %description
 -
