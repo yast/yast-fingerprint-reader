@@ -10,7 +10,8 @@ Conflicts:	yast2-hardware-detection < 2.15.7
 Summary:	YaST2 - Fingerprint Reader Configuration
 
 %description
--
+YaST module for configuration of fingerprint authentication using the
+thinkfinger library.
 
 @PREP@
 
