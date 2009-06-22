@@ -1,6 +1,7 @@
 @HEADER-COMMENT@
 
 @HEADER@
+License: GPL v2 or later
 Requires:	yast2 yast2-pam
 BuildRequires:	libfprint0 libfprint-devel libusb-devel
 BuildRequires:	doxygen gcc-c++ yast2-core-devel perl-XML-Writer update-desktop-files yast2 yast2-devtools yast2-testsuite yast2-pam
