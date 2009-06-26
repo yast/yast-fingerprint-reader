@@ -139,10 +139,7 @@ The fingerprint reader configuration updates your PAM settings to enable authent
 	    // temporary enable pam module
 	}
         else if (ret == `next) {
-	    if (use_pam &&
-		!Package::InstallAll (FingerprintReader::UpdatedArchPackages (
-		    FingerprintReader::required_packages))
-	    )
+	    if (use_pam && !Package::InstallAll (FingerprintReader::required_packages))
 	    {
 		use_pam     = false;
 		UI::ChangeWidget (`id (`rd), `Value, `pamno);
