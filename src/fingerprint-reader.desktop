@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Categories=Settings;System;Qt;X-SuSE-YaST;X-SuSE-YaST-Misc;
+Categories=Settings;System;Qt;X-SuSE-YaST;X-SuSE-YaST-Hardware;
 
 X-KDE-ModuleType=Library
 X-KDE-RootOnly=true
@@ -15,6 +15,7 @@ X-SuSE-YaST-AutoInst=
 X-SuSE-YaST-Geometry=
 X-SuSE-YaST-SortKey=
 X-SuSE-YaST-AutoInstResource=fingerprint-reader
+X-SuSE-YaST-Keywords=fingerprint,authentication
 
 Icon=yast-fingerprint
 Exec=/sbin/yast2 fingerprint-reader 

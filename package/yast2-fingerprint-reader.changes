@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Tue Sep  1 08:59:25 CEST 2009 - jsuchome@suse.cz
+
+- changed category from Misc to Hardware (bnc#529481)
+- added keywords fro searching
+- 2.18.1
+
+-------------------------------------------------------------------
 Fri Jun 26 15:07:20 CEST 2009 - jsuchome@suse.cz
 
 - manual installation of 32bit packages packages no longer needed
