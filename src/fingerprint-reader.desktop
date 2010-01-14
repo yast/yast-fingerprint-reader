@@ -18,9 +18,8 @@ X-SuSE-YaST-AutoInstResource=fingerprint-reader
 X-SuSE-YaST-Keywords=fingerprint,authentication
 
 Icon=yast-fingerprint
-Exec=/sbin/yast2 fingerprint-reader 
+Exec=xdg-su -c "/sbin/yast2 fingerprint-reader"
 
 Name=Fingerprint Reader
 GenericName=Set up fingerprint authentication
-X-KDE-SubstituteUID=true
 StartupNotify=true
