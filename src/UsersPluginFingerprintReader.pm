@@ -100,6 +100,7 @@ sub adapt_fingerprint_info {
     if ($fingerprint_dir && $fingerprint_dir ne $username) {
 	my $tmp_dir	= Directory->tmpdir ();
 	my $new_dir	= "$tmp_dir/$username";
+y2internal ("tmp dir $tmp_dir, new $new_dir");
 	# there might be some directory related to deleted user - remove it:
 	SCR->Execute (".target.bash", "/bin/rm -rf $new_dir");
 	# move the current tmp directory
@@ -327,6 +328,7 @@ sub Write {
 	my $gid		= $data->{"gidNumber"};
 
 	my $command = "/bin/chown -R $uid:$gid $fingerprint_dir";
+y2internal ("command: $command");
 	my %out     = %{SCR->Execute (".target.bash_output", $command)};
 	if (($out{"stderr"} || "") ne "") {
 	    y2error ("error calling $command: ", $out{"stderr"} || "");

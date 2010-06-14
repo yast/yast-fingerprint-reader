@@ -143,7 +143,7 @@ int FPrintAPI::acquire (int write_fd, string dir_path)
 
 	r = fp_enroll_finger (dev, &enrolled_print);
 
-	y2debug ("retval: %d", r);
+	y2internal ("retval: %d", r);
 
 	if (r < 0) {
 	    y2error ("Enroll failed with error %d", r);
@@ -214,7 +214,7 @@ YCPList FPrintAgent::Dir(const YCPPath& path)
  */
 YCPValue FPrintAgent::Read(const YCPPath &path, const YCPValue& arg, const YCPValue& opt) {
 
-    y2debug ("Path in Read(): %s", path->toString().c_str());
+    y2internal ("Path in Read(): %s", path->toString().c_str());
     YCPValue ret = YCPVoid(); 
 
     if (path->length() == 0) {
