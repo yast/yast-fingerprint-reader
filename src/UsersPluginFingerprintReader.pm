@@ -61,7 +61,7 @@ sub contains {
 # helper, check if Fingerprint Reader was already configured
 sub fingerprint_reader_configured {
 
-    return Pam->Enabled ("fp");
+    return Pam->Enabled ("fprint");
 }
 
 # helper function: check if Fingerprint Reader (the device) is available

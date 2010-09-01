@@ -53,7 +53,7 @@ global boolean run_users	= false;
 /**
  * Required packages for this module to operate
  */
-global list<string> required_packages = ["pam_fp"];
+global list<string> required_packages = ["pam_fprint"];
 
 /**
  * Write only, used during autoinstallation.
@@ -83,7 +83,7 @@ global list ReadFingerprintReaderDevices () {
 }
 
 /**
- * If pam_mount is enabled, pam_fp cannot be used (bnc#390810)
+ * If pam_mount is enabled, pam_fprint cannot be used (bnc#390810)
  */
 global boolean CryptedHomesEnabled () {
 
@@ -126,7 +126,7 @@ global boolean Read() {
 	Report::Error (_("Fingerprint reader devices cannot be used when encrypted directories are used."));
 	return false;
     }
-    use_pam	= Pam::Enabled ("fp");
+    use_pam	= Pam::Enabled ("fprint");
 
     modified = false;
     return true;
@@ -167,7 +167,7 @@ global boolean Write() {
     Progress::NextStage();
 
     boolean pam_ret	= use_pam ?
-	Pam::Add ("fp") : Pam::Remove ("fp");
+	Pam::Add ("fprint") : Pam::Remove ("fprint");
     if (!pam_ret)
 	// Error message
 	Report::Error (_("Cannot write PAM settings."));
