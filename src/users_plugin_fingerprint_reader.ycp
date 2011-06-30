@@ -271,7 +271,7 @@ are needed to save the new fingerprint.</p>");
 		details	= _("Device could not be opened.");
 	    else if (exit_status == 253)
 		// error message, part 2
-		details	= _("USB error occured.");
+		details	= _("USB error occurred.");
 	    else if (exit_status == 254)
 		// error message, part 2
 		details = _("Communication with fingerprint reader failed.");
