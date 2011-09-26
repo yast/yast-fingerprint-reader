@@ -114,7 +114,7 @@ The fingerprint reader configuration updates your PAM settings to enable authent
         Stage::cont () ? Label::BackButton () : Label::CancelButton (),
 	Stage::cont () ? Label::NextButton () : Label::FinishButton ()
     );
-    Wizard::SetDesktopTitleAndIcon ("fingerprint");
+    Wizard::SetDesktopTitleAndIcon ("fingerprint-reader");
     if (!Stage::cont ())
 	Wizard::HideAbortButton ();
 
