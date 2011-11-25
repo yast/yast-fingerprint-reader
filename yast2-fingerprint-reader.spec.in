@@ -5,7 +5,7 @@ Group:	System/YaST
 License: GPL-2.0+
 Requires:	yast2-pam
 Requires:	yast2 >= 2.21.22
-BuildRequires:	libfprint0 libfprint-devel libusb-devel
+BuildRequires:	libfprint0 libfprint-devel libusb-devel libtool
 BuildRequires:	doxygen gcc-c++ yast2-core-devel perl-XML-Writer update-desktop-files yast2 yast2-devtools yast2-testsuite yast2-pam
 
 Conflicts:	yast2-hardware-detection < 2.15.7
