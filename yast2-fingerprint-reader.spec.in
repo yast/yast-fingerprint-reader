@@ -1,8 +1,8 @@
 @HEADER-COMMENT@
 
 @HEADER@
-Group:	System/YaST
-License: GPL-2.0+
+Group:          System/YaST
+License:        GPL-2.0
 Requires:	yast2-pam
 Requires:	yast2 >= 2.21.22
 BuildRequires:	libfprint0 libfprint-devel libusb-devel libtool
@@ -36,3 +36,4 @@ thinkfinger library.
 @scrconfdir@/*.scr
 @plugindir@/libpy2ag_fprint.*
 %doc @docdir@
+%doc COPYING
