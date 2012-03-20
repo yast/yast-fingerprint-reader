@@ -7,6 +7,8 @@
  * $Id$
  */
 
+#include <unistd.h>
+
 #include "FPrintAgent.h"
 
 #define PC(n)       (path->component_str(n))
