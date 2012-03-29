@@ -106,7 +106,7 @@ The fingerprint reader configuration updates your PAM settings to enable authent
 	`VSpacing (),
 	`Left (
 	    // button label
-	    `CheckBox (`id (`users), _("&Start User Management after finish"))
+	    `CheckBox (`id (`users), _("&Start User Management after Finish"))
 	)
     ), `HSpacing(3));
 

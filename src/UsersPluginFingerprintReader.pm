@@ -250,7 +250,7 @@ sub AddBefore {
 
     if (!fingerprint_reader_configured ()) {
 	# error popup
-	$error	= __("Fingerprint reader is not configured. Run 'yast2-fingerprint-reader' to configure it");
+	$error	= __("Fingerprint reader is not configured. Run 'yast2-fingerprint-reader' to configure it.");
 	return undef;
     }
     return $data;
@@ -280,7 +280,7 @@ sub EditBefore {
 
     if (!fingerprint_reader_configured ()) {
 	# error popup
-	$error	= __("Fingerprint reader is not configured. Run 'yast2-fingerprint-reader' to configure it");
+	$error	= __("Fingerprint reader is not configured. Run 'yast2-fingerprint-reader' to configure it.");
 	return undef;
     }
     return $data;

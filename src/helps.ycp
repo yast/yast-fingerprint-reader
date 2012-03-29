@@ -38,7 +38,7 @@ map HELPS = $[
 
     /* Read dialog help 1/2 */
     "read" : _("<p><b>Initializing Fingerprint Reader Configuration</b><br>
-Please wait...<br></p>
+</p>
 ") +
 
     /* Read dialog help 2/2 */
@@ -48,7 +48,8 @@ Safely abort the configuration utility by pressing <b>Abort</b> now.</p>
 
     /* Write dialog help 1/2 */
     "write" : _("<p><b>Saving Fingerprint Reader Configuration</b><br>
-Please wait...<br></p>\n") +
+</p>
+") +
 
     /* Write dialog help 2/2 */
 _("<p><b><big>Aborting Saving:</big></b><br>
