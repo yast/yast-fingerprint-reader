@@ -89,7 +89,9 @@ are needed to save the new fingerprint.</p>");
 		`Label (`id (`label), _("Initializing fingerprint reader..."))
 	    ),
 	    `ReplacePoint (`id (`rpstatus), `VSpacing ()),
-	    `PushButton (`id (`cancel), Label::CancelButton ()),
+	    `ReplacePoint (`id (`rpbutton),
+	        `PushButton (`id (`cancel), Label::CancelButton ())
+            ),
 	    `ReplacePoint (`id (`rpswipes), `VSpacing ()),
 	    `VSpacing (0.5)
 	    ),
@@ -104,8 +106,8 @@ are needed to save the new fingerprint.</p>");
 	    Label::CancelButton(), Label::OKButton());
 
 	Wizard::HideAbortButton ();
+	Wizard::HideBackButton ();
 	Wizard::DisableNextButton ();
-	Wizard::DisableBackButton ();
 
 	boolean exit		= false;
 	any ui			= nil;
@@ -142,6 +144,12 @@ are needed to save the new fingerprint.</p>");
 	    UI::ReplaceWidget (`id (`rp), `Label (label));
 	    UI::ReplaceWidget (`id (`rpstatus), `Label (message));
 	}
+
+        // retry acquiring fingerprint
+        boolean retry   = true;
+        while (retry)
+        {
+          retry         = false;
 
 	if (SCR::Execute (.fprint.enroll, fingerprint_dir) != true)
 	{
@@ -271,8 +279,8 @@ are needed to save the new fingerprint.</p>");
 	    UI::ReplaceWidget (`id (`rp), `Label (_("Fingerprint acquired successfully.")));
 	    UI::ReplaceWidget (`id (`rpstatus), `Label (""));
 	    // new id was already saved
-	    Wizard::DisableBackButton ();
 	    Wizard::EnableNextButton ();
+	    UI::ChangeWidget (`id (`cancel), `Enabled, false);
 	}
 	else
 	{
@@ -299,10 +307,25 @@ are needed to save the new fingerprint.</p>");
 	    {
 		status_message (error, details);
 	    }
-	    Wizard::EnableBackButton ();
+            if (ui == `cancel)
+            {
+	      UI::ChangeWidget (`id (`cancel), `Enabled, false);
+            }
+            else
+            {
+              // button label
+	      UI::ReplaceWidget (`id (`rpbutton), `PushButton (`id (`retry), _("Retry")));
+	      Wizard::RestoreBackButton ();
+            }
 	}
-	UI::ChangeWidget (`id (`cancel), `Enabled, false);
-	ret	= UI::UserInput ();
+        if (ui != `cancel)
+        {
+	    ret	= UI::UserInput ();
+        }
+        else
+        {
+            ret = `cancel;
+        }
 	if (ret == `next)
 	{
 	    // modified data to add to user
@@ -316,6 +339,13 @@ are needed to save the new fingerprint.</p>");
 	    else if (data["what"]:"" == "add_user")
 		Users::AddUser (tmp_data);
 	}
+        else if (ret == `retry)
+        {
+            UI::ReplaceWidget (`id (`rpbutton), `PushButton (`id (`cancel), Label::CancelButton ()));
+	    Wizard::HideBackButton ();
+            retry       = true;
+        }
+        }
 	Wizard::CloseDialog ();
     }
     y2milestone("users plugin finished with %1", ret);

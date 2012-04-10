@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Tue Apr 10 16:15:27 CEST 2012 - jsuchome@suse.cz
+
+- added Retry button, do not show two Cancel buttons (bnc#680117) 
+- reduce agent logging
+- 2.22.3
+
+-------------------------------------------------------------------
 Thu Mar 29 14:40:12 CEST 2012 - jsuchome@suse.cz
 
 - merged proofread texts 
