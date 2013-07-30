@@ -10,6 +10,8 @@ BuildRequires:	doxygen gcc-c++ yast2-core-devel perl-XML-Writer update-desktop-f
 
 Conflicts:	yast2-hardware-detection < 2.15.7
 
+Requires:       yast2-ruby-bindings >= 1.0.0
+
 Summary:	YaST2 - Fingerprint Reader Configuration
 
 %description
@@ -28,8 +30,8 @@ thinkfinger library.
 %defattr(-,root,root)
 %dir @yncludedir@/fingerprint-reader
 @yncludedir@/fingerprint-reader/*
-@clientdir@/fingerprint-reader.ycp
-@clientdir@/users_plugin_fingerprint_reader.ycp
+@clientdir@/fingerprint-reader.rb
+@clientdir@/users_plugin_fingerprint_reader.rb
 @moduledir@/FingerprintReader.*
 @moduledir@/UsersPluginFingerprintReader.pm
 @desktopdir@/fingerprint-reader.desktop
