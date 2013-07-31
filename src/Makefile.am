@@ -1,28 +1,25 @@
-# Makefile.am for fingerprint-reader/src
+# Sources for fingerprint-reader
+
+module_DATA = \
+  modules/FingerprintReader.rb \
+  modules/UsersPluginFingerprintReader.pm
+
+client_DATA = \
+  clients/fingerprint-reader.rb \
+  clients/users_plugin_fingerprint_reader.rb
 
 yncludedir = @yncludedir@/fingerprint-reader
+ynclude_DATA = \
+  include/fingerprint-reader/wizards.rb \
+  include/fingerprint-reader/dialogs.rb \
+  include/fingerprint-reader/helps.rb
 
-client_DATA =			\
-	fingerprint-reader.ycp	\
-	users_plugin_fingerprint_reader.ycp
+scrconf_DATA = \
+  scrconf/fprint.scr
 
-ynclude_DATA =			\
-	wizards.ycp		\
-	dialogs.ycp		\
-	helps.ycp
+desktop_DATA = \
+  desktop/fingerprint-reader.desktop
 
-desktop_DATA =			\
-	fingerprint-reader.desktop
-
-module_DATA =			\
-	FingerprintReader.ycp	\
-	UsersPluginFingerprintReader.pm
-
-# create a symlink for local build, #145327
-fingerprint-reader:
-	ln -sf . $@
-ycpchook = fingerprint-reader
-
-EXTRA_DIST = $(client_DATA) $(ynclude_DATA) $(module_DATA) $(desktop_DATA)
+EXTRA_DIST = $(module_DATA) $(client_DATA) $(ynclude_DATA) $(scrconf_DATA) $(desktop_DATA)
 
 include $(top_srcdir)/Makefile.am.common
